@@ -1,0 +1,2336 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Asset Inventory</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Nunito+Sans:wght@300;400;500;600&display=swap');
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg: #f5f4f0;
+    --surface: #ffffff;
+    --surface2: #f0efe9;
+    --border: #d8d6cc;
+    --border2: #c8c6bb;
+    --text: #1a1917;
+    --text2: #6b6860;
+    --text3: #9b9990;
+    --accent: #1a3a2a;
+    --accent-light: #e8f0eb;
+    --accent-mid: #4a7c5e;
+    --danger: #8b2020;
+    --danger-light: #fdf0f0;
+    --warn: #7a4f10;
+    --warn-light: #fdf5e8;
+    --info: #1a3a5c;
+    --info-light: #e8f0f8;
+    --mono: 'Aptos Mono', 'Consolas', 'Courier New', monospace;
+    --sans: 'Aptos', 'Aptos Display', 'Nunito Sans', 'Segoe UI', sans-serif;
+    --radius: 4px;
+    --shadow: 0 1px 3px rgba(0,0,0,0.08), 0 0 0 1px rgba(0,0,0,0.04);
+  }
+
+  body {
+    font-family: var(--sans);
+    background: var(--bg);
+    color: var(--text);
+    font-size: 14px;
+    line-height: 1.5;
+    min-height: 100vh;
+  }
+
+  /* Layout */
+  .app { display: flex; flex-direction: column; min-height: 100vh; }
+
+  header {
+    background: var(--accent);
+    color: #fff;
+    padding: 0 24px;
+    height: 52px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+  }
+  header .logo {
+    font-family: var(--mono);
+    font-size: 13px;
+    font-weight: 500;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    opacity: 0.9;
+  }
+  header .logo span { opacity: 0.5; margin: 0 6px; }
+  header .hdr-actions { display: flex; gap: 8px; }
+
+  main { flex: 1; padding: 24px; max-width: 1400px; width: 100%; margin: 0 auto; }
+
+  /* Toolbar */
+  .toolbar { display: flex; align-items: center; gap: 8px; margin-bottom: 16px; flex-wrap: wrap; }
+  .toolbar-left { display: flex; gap: 8px; flex: 1; min-width: 0; align-items: center; flex-wrap: nowrap; }
+  .toolbar-right { display: flex; gap: 8px; }
+
+  .cat-dropdown { position: relative; display: inline-block; }
+  .cat-trigger {
+    font-family: var(--sans); font-size: 13px; color: var(--text);
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: var(--radius); padding: 7px 10px;
+    cursor: pointer; display: flex; align-items: center; gap: 6px;
+    min-width: 160px; justify-content: space-between; white-space: nowrap; user-select: none;
+  }
+  .cat-trigger:hover { border-color: var(--border2); }
+  .cat-trigger.active { border-color: var(--accent-mid); color: var(--accent); }
+  .cat-panel {
+    display: none; position: absolute; top: calc(100% + 4px); left: 0; z-index: 150;
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: var(--radius); box-shadow: 0 4px 16px rgba(0,0,0,0.1);
+    width: 260px; max-height: 360px; overflow-y: auto; padding: 6px 0;
+  }
+  .cat-panel.open { display: block; }
+  .cat-group-hdr {
+    display: flex; align-items: center; gap: 8px; padding: 6px 12px; cursor: pointer;
+    font-size: 11px; font-family: var(--mono); font-weight: 600;
+    text-transform: uppercase; letter-spacing: 0.06em;
+    color: var(--text2); background: var(--surface2);
+    border-bottom: 1px solid var(--border); user-select: none;
+  }
+  .cat-group-hdr:hover { background: var(--accent-light); color: var(--accent); }
+  .cat-item {
+    display: flex; align-items: center; gap: 8px;
+    padding: 5px 12px 5px 24px; cursor: pointer; font-size: 13px; color: var(--text); user-select: none;
+  }
+  .cat-item:hover { background: var(--surface2); }
+  .cat-item input[type="checkbox"], .cat-group-hdr input[type="checkbox"] {
+    width: 13px; height: 13px; cursor: pointer; accent-color: var(--accent); flex-shrink: 0;
+  }
+  .cat-footer { padding: 6px 12px; font-size: 12px; color: var(--accent-mid); cursor: pointer; border-top: 1px solid var(--border); text-align: center; }
+  .cat-footer:hover { background: var(--accent-light); }
+
+  input[type="text"], input[type="number"], input[type="date"], select, textarea {
+    font-family: var(--sans);
+    font-size: 13px;
+    color: var(--text);
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 7px 10px;
+    outline: none;
+    transition: border-color 0.15s;
+  }
+  input:focus, select:focus, textarea:focus { border-color: var(--accent-mid); }
+  input[type="text"]::placeholder { color: var(--text3); }
+
+  .search-box { flex: 2; max-width: 480px; }
+
+  select.filter-select { min-width: 130px; }
+
+  /* Buttons */
+  .btn {
+    font-family: var(--sans);
+    font-size: 13px;
+    font-weight: 500;
+    padding: 7px 14px;
+    border-radius: var(--radius);
+    border: 1px solid transparent;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    transition: all 0.15s;
+    white-space: nowrap;
+  }
+  .btn-primary { background: var(--accent); color: #fff; border-color: var(--accent); }
+  .btn-primary:hover { background: #2a5a3a; }
+  .btn-outline { background: var(--surface); color: var(--text); border-color: var(--border2); }
+  .btn-outline:hover { background: var(--surface2); }
+  .btn-danger { background: var(--danger-light); color: var(--danger); border-color: #f0c0c0; }
+  .btn-danger:hover { background: #fbe0e0; }
+  .btn-sm { padding: 4px 10px; font-size: 12px; }
+  .btn-icon { padding: 7px; min-width: 34px; justify-content: center; }
+
+  /* Stats bar */
+  .stats-bar {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 12px;
+    margin-bottom: 20px;
+  }
+  .stat-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 14px 16px;
+  }
+  .stat-label { font-size: 11px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--text3); margin-bottom: 4px; font-family: var(--mono); }
+  .stat-value { font-size: 22px; font-weight: 600; color: var(--text); font-variant-numeric: tabular-nums; }
+  .stat-value.green { color: var(--accent-mid); }
+  .stat-value.amber { color: #b87820; }
+  .stat-value.red { color: var(--danger); }
+
+  /* Table */
+  .table-wrap {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    overflow-x: auto;
+    overflow-y: visible;
+  }
+  table { width: 100%; border-collapse: collapse; min-width: 1172px; table-layout: fixed; }
+  thead tr { background: var(--surface2); border-bottom: 2px solid var(--border); }
+  th { text-align: left; padding: 10px 10px; font-size: 11px; font-family: var(--mono); font-weight: 500; text-transform: uppercase; letter-spacing: 0.06em; color: var(--text2); white-space: nowrap; cursor: pointer; user-select: none; overflow: hidden; }
+  td { padding: 10px 10px; border-bottom: 1px solid var(--border); vertical-align: middle; overflow: hidden; text-overflow: ellipsis; }
+  td.col-act { overflow: visible; padding: 6px 8px; white-space: nowrap; }
+
+  /* Column widths */
+  .col-cb    { width: 36px; }
+  .col-code  { width: 110px; }
+  .col-name  { width: 230px; }
+  .col-cat   { width: 150px; }
+  .col-loc   { width: 180px; }
+  .col-status{ width: 120px; }
+  .col-date  { width: 100px; }
+  .col-cust  { width: 130px; }
+  .col-act   { width: 112px; }
+
+  /* Print dropdown */
+  .print-dropdown { position: relative; display: inline-block; }
+  .print-dropdown-menu {
+    display: none; position: fixed;
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: var(--radius); z-index: 500; min-width: 160px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+  }
+  .print-dropdown-menu.open { display: block; }
+  .print-dropdown-item {
+    padding: 8px 14px; font-size: 12px; cursor: pointer;
+    color: var(--text); display: block; white-space: nowrap;
+  }
+  .print-dropdown-item:hover { background: var(--surface2); }
+  thead tr { background: var(--surface2); border-bottom: 2px solid var(--border); }
+  th {
+    text-align: left;
+    padding: 10px 12px;
+    font-size: 11px;
+    font-family: var(--mono);
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--text2);
+    white-space: nowrap;
+    cursor: pointer;
+    user-select: none;
+  }
+  th:hover { color: var(--text); }
+  th .sort-icon { margin-left: 4px; opacity: 0.4; }
+  th.sorted .sort-icon { opacity: 1; color: var(--accent-mid); }
+  td { padding: 10px 12px; border-bottom: 1px solid var(--border); vertical-align: middle; }
+  tr:last-child td { border-bottom: none; }
+  tr:hover td { background: var(--surface2); }
+  tr.selected td { background: var(--accent-light); }
+
+  .asset-id { font-family: var(--mono); font-size: 12px; color: var(--text2); }
+  .asset-name { font-weight: 500; color: var(--text); white-space: normal; word-break: break-word; line-height: 1.35; }
+  .asset-serial { font-family: var(--mono); font-size: 11px; color: var(--text3); margin-top: 2px; }
+
+  /* Status badges */
+  .badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 3px 8px;
+    border-radius: 2px;
+    font-size: 11px;
+    font-weight: 500;
+    font-family: var(--mono);
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    white-space: nowrap;
+  }
+  .badge-active { background: var(--accent-light); color: var(--accent); }
+  .badge-maintenance { background: var(--warn-light); color: var(--warn); }
+  .badge-retired { background: var(--surface2); color: var(--text3); border: 1px solid var(--border); }
+  .badge-scrapped { background: var(--danger-light); color: var(--danger); }
+  .badge-instock { background: var(--info-light); color: var(--info); }
+  .dot-instock { background: #2a6aaa; }
+
+  .dot { width: 6px; height: 6px; border-radius: 50%; display: inline-block; }
+  .dot-active { background: var(--accent-mid); }
+  .dot-maintenance { background: #c8820a; }
+  .dot-retired { background: var(--text3); }
+  .dot-scrapped { background: var(--danger); }
+
+  .cat-tag {
+    font-size: 11px;
+    font-family: var(--mono);
+    color: var(--text2);
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 2px;
+    padding: 2px 6px;
+    white-space: nowrap;
+    display: inline-block;
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .currency { font-family: var(--mono); font-size: 13px; }
+  .currency-small { font-family: var(--mono); font-size: 11px; color: var(--text3); }
+
+  .row-actions { display: flex; gap: 4px; opacity: 0; transition: opacity 0.15s; flex-shrink: 0; flex-wrap: nowrap; }
+  tr:hover .row-actions { opacity: 1; }
+  tr.selected .row-actions { opacity: 1; }
+
+  /* Checkbox */
+  .cb-cell { width: 36px; padding: 0 8px !important; }
+  input[type="checkbox"] {
+    width: 15px; height: 15px;
+    cursor: pointer;
+    accent-color: var(--accent);
+  }
+
+  /* Bulk action bar */
+  .bulk-bar {
+    display: none;
+    align-items: center;
+    gap: 12px;
+    padding: 8px 16px;
+    background: var(--accent-light);
+    border: 1px solid #b8d4c0;
+    border-radius: var(--radius);
+    margin-bottom: 12px;
+    font-size: 13px;
+  }
+  .bulk-bar.visible { display: flex; }
+  .bulk-bar-label { font-weight: 500; color: var(--accent); flex: 1; }
+  .bulk-bar-label span { font-family: var(--mono); font-size: 14px; font-weight: 700; }
+
+  .empty-state {
+    text-align: center;
+    padding: 60px 20px;
+    color: var(--text3);
+  }
+  .empty-state p { font-size: 15px; margin-bottom: 8px; }
+  .empty-state small { font-size: 12px; }
+
+  /* Pagination */
+  .pagination {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 16px;
+    border-top: 1px solid var(--border);
+    background: var(--surface2);
+    font-size: 12px;
+    color: var(--text2);
+  }
+  .page-btns { display: flex; gap: 4px; }
+  .page-btn {
+    min-width: 28px;
+    height: 28px;
+    padding: 0 6px;
+    border: 1px solid var(--border);
+    background: var(--surface);
+    border-radius: var(--radius);
+    cursor: pointer;
+    font-size: 12px;
+    font-family: var(--mono);
+    color: var(--text);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.1s;
+  }
+  .page-btn:hover { background: var(--accent-light); }
+  .page-btn.active { background: var(--accent); color: #fff; border-color: var(--accent); }
+  .page-btn:disabled { opacity: 0.3; cursor: not-allowed; }
+
+  /* Modal */
+  .overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(10,10,8,0.5);
+    z-index: 200;
+    align-items: flex-start;
+    justify-content: center;
+    padding: 40px 16px;
+    overflow-y: auto;
+  }
+  .overlay.open { display: flex; }
+
+  .modal {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    width: 100%;
+    max-width: 860px;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.15);
+    animation: modalIn 0.18s ease;
+  }
+  @keyframes modalIn { from { opacity: 0; transform: translateY(-12px); } to { opacity: 1; transform: translateY(0); } }
+
+  .modal-header {
+    padding: 18px 24px 16px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .modal-title { font-size: 15px; font-weight: 600; }
+  .modal-subtitle { font-size: 12px; color: var(--text3); font-family: var(--mono); margin-top: 2px; }
+  .modal-body { padding: 20px 24px; overflow-x: auto; max-height: calc(100vh - 220px); overflow-y: auto; }
+  .modal-footer {
+    padding: 14px 24px;
+    border-top: 1px solid var(--border);
+    display: flex;
+    justify-content: flex-end;
+    gap: 8px;
+    background: var(--surface2);
+    border-radius: 0 0 6px 6px;
+  }
+
+  .close-btn {
+    width: 28px; height: 28px;
+    display: flex; align-items: center; justify-content: center;
+    border: none; background: none; cursor: pointer;
+    border-radius: var(--radius);
+    color: var(--text3);
+    font-size: 18px;
+    line-height: 1;
+  }
+  .close-btn:hover { background: var(--surface2); color: var(--text); }
+
+  /* Form grid */
+  .form-section { margin-bottom: 20px; }
+  .form-section-title {
+    font-family: var(--mono);
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--text3);
+    margin-bottom: 10px;
+    padding-bottom: 6px;
+    border-bottom: 1px solid var(--border);
+  }
+  .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .form-grid.cols3 { grid-template-columns: 1fr 1fr 1fr; }
+  .form-field { display: flex; flex-direction: column; gap: 4px; }
+  .form-field.span2 { grid-column: 1 / -1; }
+  label { font-size: 12px; font-weight: 500; color: var(--text2); }
+  label .req { color: var(--danger); margin-left: 2px; }
+  input[type="text"], input[type="number"], input[type="date"], select, textarea {
+    width: 100%;
+  }
+  textarea { resize: vertical; min-height: 64px; font-family: var(--sans); }
+  .hint { font-size: 11px; color: var(--text3); }
+
+  /* Modal tabs */
+  .modal-tabs {
+    display: flex;
+    border-bottom: 1px solid var(--border);
+    background: var(--surface2);
+    padding: 0 24px;
+  }
+  .modal-tab {
+    font-family: var(--sans);
+    font-size: 13px;
+    font-weight: 500;
+    padding: 11px 16px;
+    border: none;
+    background: none;
+    cursor: pointer;
+    color: var(--text2);
+    border-bottom: 2px solid transparent;
+    margin-bottom: -1px;
+    transition: color 0.15s, border-color 0.15s;
+  }
+  .modal-tab:hover { color: var(--text); }
+  .modal-tab.active { color: var(--accent); border-bottom-color: var(--accent); }
+  .tab-panel { display: none; }
+  .tab-panel.active { display: block; }
+
+  /* Component rows */
+  .comp-row td { padding: 5px 6px; border-bottom: 1px solid var(--border); }
+  .comp-row:last-child td { border-bottom: none; }
+  .comp-row input, .comp-row select { font-size: 12px; padding: 5px 7px; width: 100%; }
+
+  /* Log entries */
+  .log-entry {
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    margin-bottom: 10px;
+    overflow: hidden;
+  }
+  .log-entry-header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 12px;
+    background: var(--surface2);
+    border-bottom: 1px solid var(--border);
+  }
+  .log-entry-body { padding: 10px 12px; font-size: 13px; color: var(--text); line-height: 1.6; white-space: pre-wrap; }
+  .log-type-badge {
+    font-size: 10px;
+    font-family: var(--mono);
+    font-weight: 600;
+    text-transform: uppercase;
+    padding: 2px 7px;
+    border-radius: 2px;
+    letter-spacing: 0.05em;
+  }
+  .log-maintenance { background: var(--warn-light); color: var(--warn); }
+  .log-repair { background: var(--danger-light); color: var(--danger); }
+  .log-upgrade { background: var(--info-light); color: var(--info); }
+  .log-transfer { background: #f0eaff; color: #5340a0; }
+  .log-inspection { background: var(--accent-light); color: var(--accent); }
+  .log-note { background: var(--surface2); color: var(--text2); border: 1px solid var(--border); }
+  .log-auto { background: #f0eaff; color: #5340a0; }
+  .log-meta { font-size: 11px; color: var(--text3); font-family: var(--mono); flex: 1; }
+  .log-auto-tag { font-size: 10px; font-family: var(--mono); color: #9b8cc8; background: #e8e0ff; border-radius: 2px; padding: 1px 5px; }
+  .log-delete-btn { font-size: 11px; color: var(--text3); background: none; border: none; cursor: pointer; padding: 2px 4px; border-radius: 2px; }
+  .log-delete-btn:hover { color: var(--danger); background: var(--danger-light); }
+
+  /* Export modal */
+  .export-option {
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 12px 14px;
+    margin-bottom: 8px;
+    cursor: pointer;
+    transition: border-color 0.15s;
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+  }
+  .export-option:hover { border-color: var(--accent-mid); background: var(--accent-light); }
+  .export-icon { font-size: 18px; margin-top: 1px; }
+  .export-label { font-weight: 500; font-size: 13px; }
+  .export-desc { font-size: 11px; color: var(--text3); margin-top: 2px; }
+
+  /* Toast */
+  .toast-container { position: fixed; bottom: 20px; right: 20px; z-index: 300; display: flex; flex-direction: column; gap: 8px; }
+  .toast {
+    background: var(--text);
+    color: #fff;
+    padding: 10px 16px;
+    border-radius: var(--radius);
+    font-size: 13px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+    animation: toastIn 0.2s ease;
+    max-width: 320px;
+  }
+  .toast.success { background: var(--accent); }
+  .toast.error { background: var(--danger); }
+  @keyframes toastIn { from { opacity: 0; transform: translateX(12px); } to { opacity: 1; transform: translateX(0); } }
+
+  /* Responsive */
+  @media (max-width: 640px) {
+    main { padding: 16px; }
+    .form-grid { grid-template-columns: 1fr; }
+    .form-grid.cols3 { grid-template-columns: 1fr; }
+  }
+  /* ── Login ── */
+  #loginPage { display:flex; align-items:center; justify-content:center; min-height:100vh; background:var(--accent); }
+  .login-card { background:var(--surface); border-radius:8px; padding:40px 36px; width:100%; max-width:360px; box-shadow:0 8px 32px rgba(0,0,0,0.25); }
+  .login-logo { font-family:var(--mono); font-size:11px; letter-spacing:0.15em; color:var(--text3); text-transform:uppercase; margin-bottom:24px; }
+  .login-logo strong { display:block; font-size:18px; color:var(--text); font-family:var(--sans); font-weight:600; letter-spacing:0; margin-bottom:2px; }
+  .login-card label { display:block; font-size:11px; font-weight:600; color:var(--text2); text-transform:uppercase; letter-spacing:0.07em; margin-bottom:5px; margin-top:16px; }
+  .login-card input { width:100%; padding:9px 12px; border:1.5px solid var(--border); border-radius:5px; font-size:14px; font-family:var(--sans); background:var(--surface); color:var(--text); outline:none; transition:border-color 0.15s; }
+  .login-card input:focus { border-color:var(--accent-mid); }
+  .login-btn { width:100%; margin-top:22px; padding:10px; background:var(--accent); color:#fff; border:none; border-radius:5px; font-size:14px; font-weight:600; font-family:var(--sans); cursor:pointer; transition:background 0.15s; }
+  .login-btn:hover { background:var(--accent-mid); }
+  .login-error { margin-top:12px; font-size:12px; color:var(--danger); text-align:center; display:none; }
+  #appPage { display:none; }
+  .user-pill { display:flex; align-items:center; gap:8px; font-size:12px; color:#ccc; font-family:var(--mono); }
+  .user-pill span { background:rgba(255,255,255,0.12); padding:3px 10px; border-radius:20px; }
+  .logout-btn { background:none; border:1px solid rgba(255,255,255,0.25); color:#ccc; padding:3px 10px; border-radius:4px; font-size:11px; cursor:pointer; font-family:var(--sans); transition:all 0.15s; }
+  .logout-btn:hover { background:rgba(255,255,255,0.1); color:#fff; }
+</style>
+</head>
+<body>
+
+<!-- Login Page -->
+<div id="loginPage">
+  <div class="login-card">
+    <div class="login-logo">
+      <strong>AssetTrack</strong>
+      MMI / MMR / HW Inventory
+    </div>
+    <label>Username</label>
+    <input type="text" id="loginUser" placeholder="Enter username" onkeydown="if(event.key==='Enter')doLogin()">
+    <label>Password</label>
+    <input type="password" id="loginPass" placeholder="Enter password" onkeydown="if(event.key==='Enter')doLogin()">
+    <button class="login-btn" onclick="doLogin()">Sign In</button>
+    <div class="login-error" id="loginError">Incorrect username or password.</div>
+  </div>
+</div>
+
+<!-- App Page -->
+<div id="appPage">
+<div class="app">
+
+<header>
+  <div class="logo">AssetTrack <span>/</span> Inventory</div>
+  <div class="hdr-actions">
+    <button class="btn btn-outline btn-sm" id="btnExport" onclick="openExport()" style="color:#ccc;border-color:#4a6a5a;">
+      ↑ Export
+    </button>
+    <button class="btn btn-outline btn-sm" id="btnImport" onclick="openImport()" style="color:#ccc;border-color:#4a6a5a;">
+      ↓ Import
+    </button>
+    <button class="btn btn-sm" id="btnAddAsset" onclick="openAdd()" style="background:#4a9e6e;color:#fff;border:none;">
+      + Add Asset
+    </button>
+    <div class="user-pill" id="userPill"></div>
+  </div>
+</header>
+
+<main>
+
+  <!-- Stats -->
+  <div class="stats-bar" id="statsBar"></div>
+
+  <!-- Toolbar -->
+  <div class="toolbar">
+    <div class="toolbar-left">
+      <input type="text" class="search-box" placeholder="Search name, serial, code…" id="searchInput" oninput="applyFilters()" style="flex:2;min-width:0;">
+
+      <div class="cat-dropdown" id="catDropdown" style="flex:1;min-width:0;">
+        <div class="cat-trigger" id="catTrigger" onclick="toggleCatPanel()" style="width:100%;">
+          <span id="catTriggerLabel">All Categories</span>
+          <span class="arrow">▼</span>
+        </div>
+        <div class="cat-panel" id="catPanel">
+          <div id="catPanelItems"></div>
+          <div class="cat-footer" onclick="clearCatFilter()">✕ Clear filter</div>
+        </div>
+      </div>
+
+      <div class="cat-dropdown" id="deptDropdown" style="flex:1;min-width:0;">
+        <div class="cat-trigger" id="deptTrigger" onclick="toggleDeptPanel()" style="width:100%;">
+          <span id="deptTriggerLabel">All Departments</span>
+          <span class="arrow">▼</span>
+        </div>
+        <div class="cat-panel" id="deptPanel">
+          <div id="deptPanelItems"></div>
+          <div class="cat-footer" onclick="clearDeptFilter()">✕ Clear filter</div>
+        </div>
+      </div>
+
+      <div class="cat-dropdown" id="locDropdown" style="flex:1;min-width:0;">
+        <div class="cat-trigger" id="locTrigger" onclick="toggleLocPanel()" style="width:100%;">
+          <span id="locTriggerLabel">All Locations</span>
+          <span class="arrow">▼</span>
+        </div>
+        <div class="cat-panel" id="locPanel">
+          <div id="locPanelItems"></div>
+          <div class="cat-footer" onclick="clearLocFilter()">✕ Clear filter</div>
+        </div>
+      </div>
+
+      <div class="cat-dropdown" id="statusDropdown" style="flex:1;min-width:0;">
+        <div class="cat-trigger" id="statusTrigger" onclick="toggleStatusPanel()" style="width:100%;">
+          <span id="statusTriggerLabel">All Status</span>
+          <span class="arrow">▼</span>
+        </div>
+        <div class="cat-panel" id="statusPanel">
+          <div id="statusPanelItems"></div>
+          <div class="cat-footer" onclick="clearStatusFilter()">✕ Clear filter</div>
+        </div>
+      </div>
+    </div>
+    <div class="toolbar-right">
+      <span style="font-size:12px;color:var(--text3);font-family:var(--mono);align-self:center;white-space:nowrap;" id="resultCount"></span>
+    </div>
+  </div>
+
+  <!-- Bulk action bar -->
+  <div class="bulk-bar" id="bulkBar">
+    <div class="bulk-bar-label"><span id="bulkCount">0</span> assets selected</div>
+    <div class="print-dropdown">
+      <button class="btn btn-primary btn-sm" onclick="togglePrintMenu(event,'bulkPrintMenu')">⊞ Print Tags ▾</button>
+      <div class="print-dropdown-menu" id="bulkPrintMenu">
+        <span class="print-dropdown-item" onclick="printSelectedTags('standard');closePrintMenus()">Standard (50×30mm)</span>
+        <span class="print-dropdown-item" onclick="printSelectedTags('mini');closePrintMenus()">Mini (30×15mm)</span>
+      </div>
+    </div>
+    <button class="btn btn-outline btn-sm" onclick="clearSelection()">✕ Deselect all</button>
+  </div>
+
+  <!-- Table -->
+  <div class="table-wrap">
+    <table id="assetTable">
+      <thead>
+        <tr>
+          <th class="col-cb cb-cell"><input type="checkbox" id="selectAll" onchange="toggleSelectAll(this.checked)" title="Select all"></th>
+          <th class="col-code" onclick="sortBy('asset_code')" data-col="asset_code">Asset Code <span class="sort-icon">↕</span></th>
+          <th class="col-name" onclick="sortBy('asset_name')" data-col="asset_name">Name / Serial <span class="sort-icon">↕</span></th>
+          <th class="col-cat" onclick="sortBy('asset_category')" data-col="asset_category">Category <span class="sort-icon">↕</span></th>
+          <th class="col-loc" onclick="sortBy('location')" data-col="location">Location <span class="sort-icon">↕</span></th>
+          <th class="col-status" onclick="sortBy('status')" data-col="status">Status <span class="sort-icon">↕</span></th>
+          <th class="col-date" onclick="sortBy('purchase_date')" data-col="purchase_date">Purchase Date <span class="sort-icon">↕</span></th>
+          <th class="col-cust" onclick="sortBy('custodian')" data-col="custodian">Custodian <span class="sort-icon">↕</span></th>
+          <th class="col-act"></th>
+        </tr>
+      </thead>
+      <tbody id="tableBody"></tbody>
+    </table>
+    <div class="pagination" id="pagination"></div>
+  </div>
+
+</main>
+
+</div>
+
+<!-- Add/Edit Modal -->
+<div class="overlay" id="assetModal">
+  <div class="modal">
+    <div class="modal-header">
+      <div>
+        <div class="modal-title" id="modalTitle">Add Asset</div>
+        <div class="modal-subtitle" id="modalSubtitle">ERPNext-compatible fields</div>
+      </div>
+      <button class="close-btn" onclick="closeModal()">×</button>
+    </div>
+    <div class="modal-body" style="padding:0;">
+
+      <!-- Tabs -->
+      <div class="modal-tabs">
+        <button class="modal-tab active" onclick="switchTab('details')">Details</button>
+        <button class="modal-tab" onclick="switchTab('components')">Components</button>
+        <button class="modal-tab" onclick="switchTab('log')">Activity Log</button>
+      </div>
+
+      <!-- Tab: Details -->
+      <div class="tab-panel active" id="tab-details" style="padding:20px 24px;">
+        <div class="form-section">
+          <div class="form-section-title">Identification</div>
+          <div class="form-grid">
+            <div class="form-field">
+              <label>Asset Code <span class="req">*</span></label>
+              <input type="text" id="f_asset_code" placeholder="e.g. AST-00001">
+              <span class="hint">Unique identifier (maps to ERPNext name)</span>
+            </div>
+            <div class="form-field">
+              <label>Asset Name <span class="req">*</span></label>
+              <input type="text" id="f_asset_name" placeholder="e.g. Dell Latitude 5530" list="assetNameList">
+              <datalist id="assetNameList"></datalist>
+            </div>
+            <div class="form-field">
+              <label>Serial Number</label>
+              <input type="text" id="f_serial_no" placeholder="Manufacturer serial">
+            </div>
+            <div class="form-field">
+              <label>Asset Category <span class="req">*</span></label>
+              <select id="f_asset_category">
+                <option value="">— Select Category —</option>
+                <optgroup label="IT &amp; Electronics">
+                  <option>Laptop</option>
+                  <option>Desktop PC</option>
+                  <option>Monitor</option>
+                  <option>Printer / Scanner</option>
+                  <option>Barcode Scanner</option>
+                  <option>Network Equipment</option>
+                  <option>Server</option>
+                  <option>UPS / AVR</option>
+                  <option>Mobile Phone</option>
+                  <option>Tablet</option>
+                  <option>CCTV / Security Camera</option>
+                  <option>Projector</option>
+                  <option>Telephone / PABX</option>
+                  <option>Biometrics</option>
+                  <option>AV Equipment</option>
+                  <option>Cash Drawer</option>
+                  <option>IT Peripherals &amp; Accessories</option>
+                </optgroup>
+                <optgroup label="Office">
+                  <option>Office Furniture</option>
+                  <option>Office Filing Cabinet</option>
+                  <option>Air Conditioning Unit</option>
+                  <option>Electric Fan</option>
+                  <option>Kitchen Appliance</option>
+                  <option>Whiteboard / Corkboard</option>
+                  <option>Safe / Vault</option>
+                  <option>Shredder</option>
+                  <option>Laminator</option>
+                  <option>Calculator</option>
+                </optgroup>
+                <optgroup label="Operations">
+                  <option>Vehicle</option>
+                  <option>Heavy Equipment</option>
+                  <option>Power Tools</option>
+                  <option>Hand Tools</option>
+                  <option>Measuring Equipment</option>
+                </optgroup>
+                <optgroup label="Warehouse">
+                  <option>Shelving / Racking</option>
+                  <option>Pallet Jack</option>
+                  <option>Forklift</option>
+                  <option>Weighing Scale</option>
+                  <option>Packaging Equipment</option>
+                  <option>Conveyor</option>
+                  <option>Push Cart</option>
+                </optgroup>
+                <optgroup label="Facilities">
+                  <option>Fire Safety Equipment</option>
+                  <option>First Aid Kit</option>
+                  <option>Generator</option>
+                </optgroup>
+                <optgroup label="Other">
+                  <option>Signage</option>
+                </optgroup>
+              </select>
+            </div>
+          </div>
+        </div>
+
+        <div class="form-section">
+          <div class="form-section-title">Assignment</div>
+          <div class="form-grid">
+            <div class="form-field">
+              <label>Custodian (Employee)</label>
+              <input type="text" id="f_custodian" placeholder="Full name">
+            </div>
+            <div class="form-field">
+              <label>Department</label>
+              <select id="f_department">
+                <option value="">— Select Department —</option>
+                <option>Dispatch</option>
+                <option>HR</option>
+                <option>Sales</option>
+                <option>Warehouse</option>
+                <option>Customer Order / Invoicing</option>
+                <option>IT</option>
+                <option>Maintenance</option>
+                <option>Management</option>
+                <option>Marketing</option>
+                <option>Online Shopping</option>
+                <option>Accounting</option>
+                <option>CM / CP / EF Coordinator</option>
+                <option>Admin</option>
+                <option>HW</option>
+                <option>Posh</option>
+                <option>Enfant Shop</option>
+                <option>Pet Nation</option>
+                <option>Big Boss</option>
+              </select>
+            </div>
+            <div class="form-field">
+              <label>Location</label>
+                            <select id="f_location">
+                <option value="">— Select Location —</option>
+                <optgroup label="Apo - Head Office">
+                  <option>Apo - Dispatch</option>
+                  <option>Apo - Online Shopping</option>
+                  <option>Apo - Server Room</option>
+                  <option>Apo - IT Storage Room</option>
+                  <option>Apo - Conference Room</option>
+                  <option>Apo - Bullpen</option>
+                  <option>Apo - Management Room</option>
+                </optgroup>
+                <optgroup label="Apo - Warehouse">
+                  <option>Apo - Warehouse Checking Area (2nd Floor)</option>
+                  <option>Apo - Warehouse 3rd Floor</option>
+                  <option>Apo - Warehouse 4th Floor</option>
+                  <option>Apo - Warehouse 5th Floor</option>
+                  <option>Apo - Warehouse 6th Floor</option>
+                  <option>Apo - Warehouse 7th Floor</option>
+                  <option>Apo - Warehouse 8th Floor</option>
+                  <option>Apo - Warehouse 9th Floor</option>
+                  <option>Apo - Warehouse 10th Floor</option>
+                  <option>Apo - Warehouse 11th Floor</option>
+                  <option>Apo - Warehouse 12th Floor</option>
+                  <option>Apo - Warehouse Loading Bay</option>
+                </optgroup>
+                <optgroup label="HW Branches">
+                  <option>HW TSP</option>
+                  <option>HW MHUB</option>
+                </optgroup>
+                <optgroup label="Posh">
+                  <option>Posh Q.Ave</option>
+                  <option>B3 - Q.Ave</option>
+                  <option>Posh Cavite</option>
+                  <option>Posh Las Pinas</option>
+                </optgroup>
+                <optgroup label="EF Shops">
+                  <option>EF3 SM Fairview</option>
+                  <option>EF4 Festival Mall</option>
+                  <option>EF18 Market Market</option>
+                  <option>EF22 SM MOA</option>
+                  <option>EF27 Lucky Chinatown</option>
+                  <option>EF28 Uptown Mall</option>
+                  <option>EF30 Trinoma</option>
+                  <option>EF31 Circuit Makati</option>
+                  <option>EF32 Greenhills</option>
+                </optgroup>
+                <optgroup label="Others">
+                  <option>Pet Nation</option>
+                  <option>Big Boss</option>
+                  <option>Pineda Office</option>
+                  <option>Off-site / Remote</option>
+                </optgroup>
+              </select>
+            </div>
+            <div class="form-field">
+              <label>Status</label>
+              <select id="f_status">
+                <option>Active</option>
+                <option>In Stock (Undeployed)</option>
+                <option>Under Maintenance</option>
+                <option>Retired</option>
+                <option>Scrapped</option>
+              </select>
+            </div>
+          </div>
+        </div>
+
+        <div class="form-section">
+          <div class="form-section-title">Purchase &amp; Value</div>
+          <div class="form-grid cols3">
+            <div class="form-field">
+              <label>Purchase Date <span class="req">*</span></label>
+              <input type="date" id="f_purchase_date">
+            </div>
+            <div class="form-field">
+              <label>Gross Purchase Amount</label>
+              <input type="number" id="f_gross_purchase_amount" placeholder="0.00" min="0" step="0.01">
+            </div>
+            <div class="form-field">
+              <label>Supplier</label>
+              <input type="text" id="f_supplier" placeholder="Vendor name">
+            </div>
+            <div class="form-field">
+              <label>Purchase Order No.</label>
+              <input type="text" id="f_purchase_order" placeholder="PO-XXXXX">
+            </div>
+            <div class="form-field">
+              <label>Expected End of Life</label>
+              <input type="date" id="f_expected_end_of_life">
+            </div>
+            <div class="form-field">
+              <label>Warranty Expiry</label>
+              <input type="date" id="f_warranty_expiry">
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Tab: Components -->
+      <div class="tab-panel" id="tab-components" style="padding:20px 24px;">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
+          <span style="font-size:12px;color:var(--text2);">Parts installed in this asset (CPU, SSD, RAM, etc.)</span>
+          <button class="btn btn-outline btn-sm" onclick="addComponentRow()">+ Add Part</button>
+        </div>
+        <div style="border:1px solid var(--border);border-radius:var(--radius);overflow-x:auto;">
+          <table style="width:100%;border-collapse:collapse;table-layout:fixed;min-width:640px;">
+            <thead>
+              <tr style="background:var(--surface2);border-bottom:1px solid var(--border);">
+                <th style="padding:8px 10px;font-size:11px;font-family:var(--mono);text-transform:uppercase;letter-spacing:0.06em;color:var(--text2);text-align:left;width:18%;">Part Type</th>
+                <th style="padding:8px 10px;font-size:11px;font-family:var(--mono);text-transform:uppercase;letter-spacing:0.06em;color:var(--text2);text-align:left;width:26%;">Brand / Model</th>
+                <th style="padding:8px 10px;font-size:11px;font-family:var(--mono);text-transform:uppercase;letter-spacing:0.06em;color:var(--text2);text-align:left;width:20%;">Serial No</th>
+                <th style="padding:8px 10px;font-size:11px;font-family:var(--mono);text-transform:uppercase;letter-spacing:0.06em;color:var(--text2);text-align:left;width:20%;">Specs</th>
+                <th style="padding:8px 10px;font-size:11px;font-family:var(--mono);text-transform:uppercase;letter-spacing:0.06em;color:var(--text2);text-align:right;width:12%;">Amount (₱)</th>
+                <th style="width:36px;"></th>
+              </tr>
+            </thead>
+            <tbody id="componentsBody"></tbody>
+          </table>
+        </div>
+        <div id="componentsEmpty" style="text-align:center;padding:28px;color:var(--text3);font-size:13px;display:none;">No components added yet. Click "+ Add Part" to start.</div>
+        <div id="componentsTotal" style="display:none;text-align:right;padding:8px 12px;font-size:13px;font-family:var(--mono);font-weight:600;color:var(--text);border-top:2px solid var(--border);background:var(--surface2);border-radius:0 0 var(--radius) var(--radius);">Total: ₱0.00</div>
+      </div>
+
+      <!-- Tab: Activity Log -->
+      <div class="tab-panel" id="tab-log" style="padding:20px 24px;">
+
+        <!-- Add log entry form -->
+        <div style="background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius);padding:14px;margin-bottom:16px;">
+          <div style="font-size:11px;font-family:var(--mono);text-transform:uppercase;letter-spacing:0.08em;color:var(--text3);margin-bottom:10px;">New Entry</div>
+          <div class="form-grid cols3" style="margin-bottom:10px;">
+            <div class="form-field">
+              <label>Date</label>
+              <input type="date" id="log_date">
+            </div>
+            <div class="form-field">
+              <label>Type</label>
+              <select id="log_type">
+                <option>Maintenance</option>
+                <option>Repair</option>
+                <option>Upgrade</option>
+                <option>Transfer</option>
+                <option>Inspection</option>
+                <option>Note</option>
+              </select>
+            </div>
+            <div class="form-field">
+              <label>By</label>
+              <input type="text" id="log_by" placeholder="Your name">
+            </div>
+          </div>
+          <div class="form-field" style="margin-bottom:10px;">
+            <label>Details</label>
+            <textarea id="log_note" placeholder="Describe what was done, parts replaced, observations…" style="min-height:56px;"></textarea>
+          </div>
+          <button class="btn btn-primary btn-sm" onclick="addLogEntry()">+ Add to Log</button>
+        </div>
+
+        <!-- Log entries -->
+        <div id="logEntries"></div>
+        <div id="logEmpty" style="text-align:center;padding:28px;color:var(--text3);font-size:13px;display:none;">No log entries yet.</div>
+      </div>
+
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="closeModal()">Cancel</button>
+      <button class="btn btn-primary" onclick="saveAsset()">Save Asset</button>
+    </div>
+  </div>
+</div>
+
+<!-- Export Modal -->
+<div class="overlay" id="exportModal">
+  <div class="modal" style="max-width:440px;">
+    <div class="modal-header">
+      <div>
+        <div class="modal-title">Export Assets</div>
+        <div class="modal-subtitle" id="exportCount"></div>
+      </div>
+      <button class="close-btn" onclick="closeExport()">×</button>
+    </div>
+    <div class="modal-body">
+      <div class="export-option" onclick="exportCSV()">
+        <div class="export-icon">📄</div>
+        <div>
+          <div class="export-label">CSV — ERPNext Import Ready</div>
+          <div class="export-desc">Columns match ERPNext Asset doctype fields exactly. Import via Data Import tool.</div>
+        </div>
+      </div>
+      <div class="export-option" onclick="exportJSON()">
+        <div class="export-icon">{ }</div>
+        <div>
+          <div class="export-label">JSON — Full Data Backup</div>
+          <div class="export-desc">Complete asset records including all fields. Use for migration or backup.</div>
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="closeExport()">Close</button>
+    </div>
+  </div>
+</div>
+
+<!-- Import Modal -->
+<div class="overlay" id="importModal">
+  <div class="modal" style="max-width:600px;">
+    <div class="modal-header">
+      <div>
+        <div class="modal-title">Import Assets from CSV / Excel</div>
+        <div class="modal-subtitle">New assets only — existing asset codes will be skipped</div>
+      </div>
+      <button class="close-btn" onclick="closeImport()">×</button>
+    </div>
+    <div class="modal-body">
+      <div style="background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius);padding:12px 14px;margin-bottom:16px;font-size:12px;line-height:1.7;color:var(--text2);">
+        <strong style="color:var(--text);display:block;margin-bottom:4px;">📋 Required columns (first row = headers):</strong>
+        <code style="font-size:11px;color:var(--accent);">asset_code, asset_name, asset_category</code> — required<br>
+        <code style="font-size:11px;color:var(--text2);">serial_no, department, location, custodian, status, purchase_date, gross_purchase_amount, supplier, purchase_order, notes</code> — optional<br><br>
+        <strong style="color:var(--text);display:block;margin-bottom:4px;">🔩 Components (optional):</strong>
+        <code style="font-size:11px;color:var(--text2);">comp_part_type, comp_brand_model, comp_serial_no, comp_specs, comp_amount</code> — add alongside asset row. Multiple rows per asset_code are merged.<br><br>
+        <span style="color:var(--accent-mid);cursor:pointer;text-decoration:underline;" onclick="downloadImportTemplate()">↓ Download template CSV</span>
+      </div>
+      <div id="importDropZone" style="border:2px dashed var(--border);border-radius:var(--radius);padding:32px;text-align:center;cursor:pointer;transition:border-color 0.15s,background 0.15s;"
+        onclick="document.getElementById('importFileInput').click()"
+        ondragover="event.preventDefault();this.style.borderColor='var(--accent-mid)';this.style.background='var(--accent-light)'"
+        ondragleave="this.style.borderColor='var(--border)';this.style.background=''"
+        ondrop="event.preventDefault();this.style.borderColor='var(--border)';this.style.background='';handleImportDrop(event)">
+        <div style="font-size:2rem;margin-bottom:8px;">📂</div>
+        <div style="font-size:13px;font-weight:500;color:var(--text);">Click to select or drag & drop</div>
+        <div style="font-size:12px;color:var(--text3);margin-top:4px;">.csv or .xlsx files</div>
+        <input type="file" id="importFileInput" accept=".csv,.xlsx,.xls" style="display:none" onchange="handleImportFile(this.files[0])">
+      </div>
+      <div id="importPreview" style="display:none;margin-top:16px;">
+        <div style="font-size:12px;font-weight:600;color:var(--text2);margin-bottom:8px;" id="importPreviewLabel"></div>
+        <div style="border:1px solid var(--border);border-radius:var(--radius);overflow-x:auto;max-height:220px;overflow-y:auto;">
+          <table style="width:100%;border-collapse:collapse;font-size:12px;min-width:500px;">
+            <thead id="importPreviewHead" style="position:sticky;top:0;background:var(--surface2);"></thead>
+            <tbody id="importPreviewBody"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="closeImport()">Cancel</button>
+      <button class="btn btn-primary" id="importConfirmBtn" onclick="confirmImport()" style="display:none;">Import Assets</button>
+    </div>
+  </div>
+</div>
+
+<!-- Delete confirm -->
+<div class="overlay" id="deleteModal">
+  <div class="modal" style="max-width:380px;">
+    <div class="modal-header">
+      <div class="modal-title" style="color:var(--danger)">Delete Asset</div>
+      <button class="close-btn" onclick="closeDelete()">×</button>
+    </div>
+    <div class="modal-body">
+      <p style="font-size:14px;line-height:1.6;">Are you sure you want to delete <strong id="deleteAssetName"></strong>? This cannot be undone.</p>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="closeDelete()">Cancel</button>
+      <button class="btn btn-danger" onclick="confirmDelete()">Delete</button>
+    </div>
+  </div>
+</div>
+
+<!-- Toast container -->
+<div class="toast-container" id="toastContainer"></div>
+
+<script>
+// ─── State ───────────────────────────────────────────────────────────────────
+const SUPABASE_URL = 'https://ajstshlbwfhjgsueyfwj.supabase.co';
+const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFqc3RzaGxid2ZoamdzdWV5ZndqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzY4MjY4MTgsImV4cCI6MjA5MjQwMjgxOH0.5q__Y3NtKsiV3N2MAfrxvFh1hKTafOmsTnBU0n8rILk';
+const SB_HEADERS = { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}`, 'Content-Type': 'application/json', 'Prefer': 'return=minimal' };
+
+async function sbFetch(path, options = {}) {
+  const { headers: extraHeaders, ...restOptions } = options;
+  const res = await fetch(`${SUPABASE_URL}/rest/v1/${path}`, {
+    ...restOptions,
+    headers: { ...SB_HEADERS, ...(extraHeaders || {}) }
+  });
+  if (!res.ok) { const err = await res.text(); throw new Error(err); }
+  if (res.status === 204 || res.headers.get('content-length') === '0') return null;
+  const text = await res.text();
+  return text ? JSON.parse(text) : null;
+}
+let assets = [];
+let filtered = [];
+let sortCol = 'asset_code';
+let sortDir = 1;
+let currentPage = 1;
+const PAGE_SIZE = 20;
+let editingId = null;
+let pendingDeleteId = null;
+let selectedIds = new Set();
+let selectedCategories = new Set();
+let selectedLocations = new Set();
+let selectedDepartments = new Set();
+let selectedStatuses = new Set();
+
+// ─── Category multi-select dropdown ──────────────────────────────────────────
+function toggleCatPanel() {
+  document.getElementById('catPanel').classList.toggle('open');
+  document.getElementById('locPanel').classList.remove('open');
+  document.getElementById('deptPanel').classList.remove('open');
+  document.getElementById('statusPanel').classList.remove('open');
+}
+
+function toggleLocPanel() {
+  document.getElementById('locPanel').classList.toggle('open');
+  document.getElementById('catPanel').classList.remove('open');
+  document.getElementById('deptPanel').classList.remove('open');
+  document.getElementById('statusPanel').classList.remove('open');
+}
+
+function toggleDeptPanel() {
+  document.getElementById('deptPanel').classList.toggle('open');
+  document.getElementById('catPanel').classList.remove('open');
+  document.getElementById('locPanel').classList.remove('open');
+  document.getElementById('statusPanel').classList.remove('open');
+}
+
+document.addEventListener('click', e => {
+  if (!document.getElementById('catDropdown').contains(e.target))
+    document.getElementById('catPanel').classList.remove('open');
+  if (!document.getElementById('locDropdown').contains(e.target))
+    document.getElementById('locPanel').classList.remove('open');
+  if (!document.getElementById('deptDropdown').contains(e.target))
+    document.getElementById('deptPanel').classList.remove('open');
+  if (!document.getElementById('statusDropdown').contains(e.target))
+    document.getElementById('statusPanel').classList.remove('open');
+});
+
+const CATEGORIES_DATA = [
+  ['IT & Electronics', ['Laptop','Desktop PC','Monitor','Printer / Scanner','Barcode Scanner','Network Equipment','Server','UPS / AVR','Mobile Phone','Tablet','CCTV / Security Camera','Projector','Telephone / PABX','Biometrics','AV Equipment','Cash Drawer','IT Peripherals & Accessories']],
+  ['Office', ['Office Furniture','Office Filing Cabinet','Air Conditioning Unit','Electric Fan','Kitchen Appliance','Whiteboard / Corkboard','Safe / Vault','Shredder','Laminator','Calculator']],
+  ['Operations', ['Vehicle','Heavy Equipment','Power Tools','Hand Tools','Measuring Equipment']],
+  ['Warehouse', ['Shelving / Racking','Pallet Jack','Forklift','Weighing Scale','Packaging Equipment','Conveyor','Push Cart']],
+  ['Facilities', ['Fire Safety Equipment','First Aid Kit','Generator']],
+  ['Other', ['Signage','Others']],
+];
+
+  const LOCATIONS_DATA = [
+    ['Apo - Head Office', ['Apo - Dispatch','Apo - Online Shopping','Apo - Server Room','Apo - IT Storage Room','Apo - Conference Room','Apo - Bullpen','Apo - Management Room']],
+    ['Apo - Warehouse', ['Apo - Warehouse Checking Area (2nd Floor)','Apo - Warehouse 3rd Floor','Apo - Warehouse 4th Floor','Apo - Warehouse 5th Floor','Apo - Warehouse 6th Floor','Apo - Warehouse 7th Floor','Apo - Warehouse 8th Floor','Apo - Warehouse 9th Floor','Apo - Warehouse 10th Floor','Apo - Warehouse 11th Floor','Apo - Warehouse 12th Floor','Apo - Warehouse Loading Bay']],
+    ['HW Branches', ['HW TSP','HW MHUB']],
+    ['Posh', ['Posh Q.Ave','B3 - Q.Ave','Posh Cavite','Posh Las Pinas']],
+    ['EF Shops', ['EF3 SM Fairview','EF4 Festival Mall','EF18 Market Market','EF22 SM MOA','EF27 Lucky Chinatown','EF28 Uptown Mall','EF30 Trinoma','EF31 Circuit Makati','EF32 Greenhills']],
+    ['Others', ['Pet Nation','Big Boss','Pineda Office','Off-site / Remote']],
+  ];
+
+const DEPARTMENTS_DATA = ['Dispatch','HR','Sales','Warehouse','Customer Order / Invoicing','IT','Maintenance','Management','Marketing','Online Shopping','Accounting','CM / CP / EF Coordinator','Admin','HW','Posh','Enfant Shop','Pet Nation','Big Boss'];
+
+function buildDeptPanel() {
+  const container = document.getElementById('deptPanelItems');
+  container.innerHTML = DEPARTMENTS_DATA.map(dept => `
+    <div class="cat-item" onclick="toggleDeptItem('${dept}', this)">
+      <input type="checkbox" data-dept="${dept}" onclick="event.stopPropagation();toggleDeptItem('${dept}', this.closest('.cat-item'))">
+      <span>${dept}</span>
+    </div>`).join('');
+}
+
+function toggleDeptItem(dept, el) {
+  const cb = el.querySelector('input[type="checkbox"]');
+  if (selectedDepartments.has(dept)) { selectedDepartments.delete(dept); if (cb) cb.checked = false; }
+  else { selectedDepartments.add(dept); if (cb) cb.checked = true; }
+  updateDeptTrigger(); applyFilters();
+}
+
+function clearDeptFilter() {
+  selectedDepartments.clear();
+  document.querySelectorAll('#deptPanelItems input[type="checkbox"]').forEach(cb => cb.checked = false);
+  updateDeptTrigger(); applyFilters();
+  document.getElementById('deptPanel').classList.remove('open');
+}
+
+function updateDeptTrigger() {
+  const trigger = document.getElementById('deptTrigger');
+  const label = document.getElementById('deptTriggerLabel');
+  const count = selectedDepartments.size;
+  if (count === 0) { label.textContent = 'All Departments'; trigger.classList.remove('active'); }
+  else if (count === 1) { label.textContent = [...selectedDepartments][0]; trigger.classList.add('active'); }
+  else { label.textContent = `${count} departments`; trigger.classList.add('active'); }
+}
+
+// ─── Status multiselect ───────────────────────────────────────────────────────
+const STATUS_OPTIONS = ['Active','In Stock (Undeployed)','Under Maintenance','Retired','Scrapped'];
+
+function toggleStatusPanel() {
+  document.getElementById('statusPanel').classList.toggle('open');
+  document.getElementById('catPanel').classList.remove('open');
+  document.getElementById('locPanel').classList.remove('open');
+  document.getElementById('deptPanel').classList.remove('open');
+}
+
+function buildStatusPanel() {
+  const container = document.getElementById('statusPanelItems');
+  container.innerHTML = STATUS_OPTIONS.map(s => `
+    <label class="cat-item" style="padding-left:12px;">
+      <input type="checkbox" ${selectedStatuses.has(s) ? 'checked' : ''} onchange="toggleStatusItem('${s}',this)">
+      <span>${s}</span>
+    </label>`).join('');
+}
+
+function toggleStatusItem(status, cb) {
+  if (selectedStatuses.has(status)) { selectedStatuses.delete(status); if (cb) cb.checked = false; }
+  else { selectedStatuses.add(status); if (cb) cb.checked = true; }
+  updateStatusTrigger(); applyFilters();
+}
+
+function clearStatusFilter() {
+  selectedStatuses.clear();
+  document.querySelectorAll('#statusPanelItems input[type="checkbox"]').forEach(cb => cb.checked = false);
+  updateStatusTrigger(); applyFilters();
+  document.getElementById('statusPanel').classList.remove('open');
+}
+
+function updateStatusTrigger() {
+  const trigger = document.getElementById('statusTrigger');
+  const label = document.getElementById('statusTriggerLabel');
+  const count = selectedStatuses.size;
+  if (count === 0) { label.textContent = 'All Status'; trigger.classList.remove('active'); }
+  else if (count === 1) { label.textContent = [...selectedStatuses][0]; trigger.classList.add('active'); }
+  else { label.textContent = `${count} statuses`; trigger.classList.add('active'); }
+}
+
+function buildCatPanel() {
+  const container = document.getElementById('catPanelItems');
+  container.innerHTML = CATEGORIES_DATA.map(([group, items]) => `
+    <div class="cat-group-hdr" onclick="toggleCatGroup('${group}', this)">
+      <input type="checkbox" id="grp_cat_${group.replace(/\s/g,'_')}" onclick="event.stopPropagation();toggleCatGroup('${group}', this.closest('.cat-group-hdr'))">
+      <span>${group}</span>
+    </div>
+    ${items.map(item => `
+      <div class="cat-item" onclick="toggleCatItem('${item}', this)">
+        <input type="checkbox" data-cat="${item}" onclick="event.stopPropagation();toggleCatItem('${item}', this.closest('.cat-item'))">
+        <span>${item}</span>
+      </div>`).join('')}
+  `).join('');
+}
+
+function buildLocPanel() {
+  const container = document.getElementById('locPanelItems');
+  container.innerHTML = LOCATIONS_DATA.map(([group, items]) => `
+    <div class="cat-group-hdr" onclick="toggleLocGroup('${group}', this)">
+      <input type="checkbox" id="grp_loc_${group.replace(/\s/g,'_')}" onclick="event.stopPropagation();toggleLocGroup('${group}', this.closest('.cat-group-hdr'))">
+      <span>${group}</span>
+    </div>
+    ${items.map(item => `
+      <div class="cat-item" onclick="toggleLocItem('${item}', this)">
+        <input type="checkbox" data-loc="${item}" onclick="event.stopPropagation();toggleLocItem('${item}', this.closest('.cat-item'))">
+        <span>${item}</span>
+      </div>`).join('')}
+  `).join('');
+}
+
+function toggleCatGroup(group, el) {
+  const items = CATEGORIES_DATA.find(([g]) => g === group)?.[1] || [];
+  const cb = el.querySelector('input[type="checkbox"]');
+  const allSelected = items.every(i => selectedCategories.has(i));
+  items.forEach(i => { if (allSelected) selectedCategories.delete(i); else selectedCategories.add(i); });
+  if (cb) cb.checked = !allSelected;
+  items.forEach(item => { const c = document.querySelector(`input[data-cat="${item}"]`); if (c) c.checked = !allSelected; });
+  updateCatTrigger(); applyFilters();
+}
+
+function toggleCatItem(item, el) {
+  const cb = el.querySelector('input[type="checkbox"]');
+  if (selectedCategories.has(item)) { selectedCategories.delete(item); if (cb) cb.checked = false; }
+  else { selectedCategories.add(item); if (cb) cb.checked = true; }
+  updateCatTrigger(); applyFilters();
+}
+
+function clearCatFilter() {
+  selectedCategories.clear();
+  document.querySelectorAll('#catPanelItems input[type="checkbox"]').forEach(cb => cb.checked = false);
+  updateCatTrigger(); applyFilters();
+  document.getElementById('catPanel').classList.remove('open');
+}
+
+function updateCatTrigger() {
+  const trigger = document.getElementById('catTrigger');
+  const label = document.getElementById('catTriggerLabel');
+  const count = selectedCategories.size;
+  if (count === 0) { label.textContent = 'All Categories'; trigger.classList.remove('active'); }
+  else if (count === 1) { label.textContent = [...selectedCategories][0]; trigger.classList.add('active'); }
+  else { label.textContent = `${count} categories`; trigger.classList.add('active'); }
+}
+
+function toggleLocGroup(group, el) {
+  const items = LOCATIONS_DATA.find(([g]) => g === group)?.[1] || [];
+  const cb = el.querySelector('input[type="checkbox"]');
+  const allSelected = items.every(i => selectedLocations.has(i));
+  items.forEach(i => { if (allSelected) selectedLocations.delete(i); else selectedLocations.add(i); });
+  if (cb) cb.checked = !allSelected;
+  items.forEach(item => { const c = document.querySelector(`input[data-loc="${item}"]`); if (c) c.checked = !allSelected; });
+  updateLocTrigger(); applyFilters();
+}
+
+function toggleLocItem(item, el) {
+  const cb = el.querySelector('input[type="checkbox"]');
+  if (selectedLocations.has(item)) { selectedLocations.delete(item); if (cb) cb.checked = false; }
+  else { selectedLocations.add(item); if (cb) cb.checked = true; }
+  updateLocTrigger(); applyFilters();
+}
+
+function clearLocFilter() {
+  selectedLocations.clear();
+  document.querySelectorAll('#locPanelItems input[type="checkbox"]').forEach(cb => cb.checked = false);
+  updateLocTrigger(); applyFilters();
+  document.getElementById('locPanel').classList.remove('open');
+}
+
+function updateLocTrigger() {
+  const trigger = document.getElementById('locTrigger');
+  const label = document.getElementById('locTriggerLabel');
+  const count = selectedLocations.size;
+  if (count === 0) { label.textContent = 'All Locations'; trigger.classList.remove('active'); }
+  else if (count === 1) { label.textContent = [...selectedLocations][0]; trigger.classList.add('active'); }
+  else { label.textContent = `${count} locations`; trigger.classList.add('active'); }
+}
+
+// ─── Seed data ────────────────────────────────────────────────────────────────
+const seedAssets = [{"id":"imported_1","asset_code":"AST-00001","serial_no":"","asset_name":"Stretch Film Machine - Cangzhou Longway","asset_category":"Packaging Equipment","department":"Warehouse","location":"Apo - Warehouse Checking Area (2nd Floor)","custodian":"Benjie","status":"Active","purchase_date":"2022-03-01","gross_purchase_amount":0,"supplier":"Alibaba","purchase_order":"","expected_end_of_life":"","warranty_expiry":"","notes":"Cangzhou Longway","components":[],"activity_log":[]},{"id":"imported_2","asset_code":"AST-00002","serial_no":"","asset_name":"Stretch Film Machine - Cangzhou Longway","asset_category":"Packaging Equipment","department":"Warehouse","location":"Apo - Warehouse Checking Area (2nd Floor)","custodian":"Benjie","status":"Active","purchase_date":"2022-03-01","gross_purchase_amount":0,"supplier":"Alibaba","purchase_order":"","expected_end_of_life":"","warranty_expiry":"","notes":"Cangzhou Longway","components":[],"activity_log":[]},{"id":"imported_3","asset_code":"AST-00003","serial_no":"","asset_name":"Stretch Film Machine - Cangzhou Longway","asset_category":"Packaging Equipment","department":"Warehouse","location":"Apo - Warehouse Checking Area (2nd Floor)","custodian":"Benjie","status":"Active","purchase_date":"2022-03-01","gross_purchase_amount":0,"supplier":"Alibaba","purchase_order":"","expected_end_of_life":"","warranty_expiry":"","notes":"Cangzhou Longway","components":[],"activity_log":[]},{"id":"imported_4","asset_code":"AST-00004","serial_no":"","asset_name":"Stretch Film Machine - Cangzhou Longway","asset_category":"Packaging Equipment","department":"Warehouse","location":"Apo - Warehouse Checking Area (2nd Floor)","custodian":"Benjie","status":"Active","purchase_date":"2022-03-01","gross_purchase_amount":0,"supplier":"Alibaba","purchase_order":"","expected_end_of_life":"","warranty_expiry":"","notes":"Cangzhou Longway","components":[],"activity_log":[]},{"id":"imported_5","asset_code":"AST-00005","serial_no":"","asset_name":"Stretch Film Machine - Cangzhou Longway","asset_category":"Packaging Equipment","department":"Warehouse","location":"Apo - Warehouse Checking Area (2nd Floor)","custodian":"","status":"In Stock (Undeployed)","purchase_date":"2022-03-01","gross_purchase_amount":0,"supplier":"Alibaba","purchase_order":"","expected_end_of_life":"","warranty_expiry":"","notes":"Cangzhou Longway","components":[],"activity_log":[]},{"id":"imported_6","asset_code":"AST-00006","serial_no":"","asset_name":"Stretch Film Machine - Cangzhou Longway","asset_category":"Packaging Equipment","department":"Warehouse","location":"Apo - Warehouse Checking Area (2nd Floor)","custodian":"","status":"In Stock (Undeployed)","purchase_date":"2022-03-01","gross_purchase_amount":0,"supplier":"Alibaba","purchase_order":"","expected_end_of_life":"","warranty_expiry":"","notes":"Cangzhou Longway","components":[],"activity_log":[]},{"id":"imported_7","asset_code":"AST-00007","serial_no":"","asset_name":"Stretch Film Machine - Cangzhou Longway","asset_category":"Packaging Equipment","department":"Warehouse","location":"Apo - Warehouse Checking Area (2nd Floor)","custodian":"","status":"In Stock (Undeployed)","purchase_date":"2022-03-01","gross_purchase_amount":0,"supplier":"Alibaba","purchase_order":"","expected_end_of_life":"","warranty_expiry":"","notes":"Cangzhou Longway","components":[],"activity_log":[]},{"id":"imported_8","asset_code":"AST-00008","serial_no":"","asset_name":"Stretch Film Machine - Cangzhou Longway","asset_category":"Packaging Equipment","department":"Warehouse","location":"Apo - Warehouse Checking Area (2nd Floor)","custodian":"","status":"In Stock (Undeployed)","purchase_date":"2022-03-01","gross_purchase_amount":0,"supplier":"Alibaba","purchase_order":"","expected_end_of_life":"","warranty_expiry":"","notes":"Cangzhou Longway","components":[],"activity_log":[]},{"id":"imported_9","asset_code":"AST-00009","serial_no":"","asset_name":"Stretch Film Machine - Cangzhou Longway","asset_category":"Packaging Equipment","department":"Warehouse","location":"Apo - Warehouse Checking Area (2nd Floor)","custodian":"","status":"In Stock (Undeployed)","purchase_date":"2022-03-01","gross_purchase_amount":0,"supplier":"Alibaba","purchase_order":"","expected_end_of_life":"","warranty_expiry":"","notes":"Cangzhou Longway","components":[],"activity_log":[]},{"id":"imported_10","asset_code":"AST-00010","serial_no":"","asset_name":"Stretch Film Machine - Cangzhou Longway","asset_category":"Packaging Equipment","department":"Warehouse","location":"Apo - Warehouse Checking Area (2nd Floor)","custodian":"","status":"Scrapped","purchase_date":"2022-03-01","gross_purchase_amount":0,"supplier":"Alibaba","purchase_order":"","expected_end_of_life":"","warranty_expiry":"","notes":"Cangzhou Longway","components":[],"activity_log":[]},{"id":"imported_11","asset_code":"AST-00011","serial_no":"2310463","asset_name":"Strapping Machine - Xt-8022 High Table Open Frame","asset_category":"Packaging Equipment","department":"Warehouse","location":"Apo - Warehouse Checking Area (2nd Floor)","custodian":"Benjie","status":"Active","purchase_date":"2024-01-11","gross_purchase_amount":0,"supplier":"Synergy","purchase_order":"","expected_end_of_life":"","warranty_expiry":"","notes":"Xt-8022 High Table Open Frame","components":[],"activity_log":[]},{"id":"imported_12","asset_code":"AST-00012","serial_no":"2310487","asset_name":"Strapping Machine - Xt-8022 High Table Open Frame","asset_category":"Packaging Equipment","department":"Warehouse","location":"B3 - Q.Ave","custodian":"Art","status":"Active","purchase_date":"2024-01-11","gross_purchase_amount":0,"supplier":"Synergy","purchase_order":"","expected_end_of_life":"","warranty_expiry":"","notes":"Xt-8022 High Table Open Frame","components":[],"activity_log":[]},{"id":"imported_13","asset_code":"AST-00013","serial_no":"","asset_name":"Projector - Xiami","asset_category":"Projector","department":"HW Head Office","location":"","custodian":"","status":"Scrapped","purchase_date":"2024-01-13","gross_purchase_amount":0,"supplier":"Lazada","purchase_order":"","expected_end_of_life":"","warranty_expiry":"","notes":"Xiami","components":[],"activity_log":[]},{"id":"imported_14","asset_code":"AST-00014","serial_no":"E80718M3H975487","asset_name":"Printer - Brother","asset_category":"Printer / Scanner","department":"Admin","location":"Pineda Office","custodian":"Crizel","status":"Active","purchase_date":"2024-01-20","gross_purchase_amount":0,"supplier":"Shopee","purchase_order":"","expected_end_of_life":"","warranty_expiry":"","notes":"Brother","components":[],"activity_log":[]},{"id":"imported_15","asset_code":"AST-00015","serial_no":"","asset_name":"Barcode Scanner - Goojprnt","asset_category":"Barcode Scanner","department":"","location":"Apo - Online Shopping","custodian":"Lazada","status":"Active","purchase_date":"2024-01-26","gross_purchase_amount":0,"supplier":"Lazada","purchase_order":"","expected_end_of_life":"","warranty_expiry":"","notes":"Goojprnt","components":[],"activity_log":[]},{"id":"imported_16","asset_code":"AST-00016","serial_no":"","asset_name":"Barcode Scanner - Goojprnt","asset_category":"Barcode Scanner","department":"Warehouse","location":"Apo - Warehouse Checking Area (2nd Floor)","custodian":"Checker Donato","status":"Active","purchase_date":"2024-01-26","gross_purchase_amount":0,"supplier":"Lazada","purchase_order":"","expected_end_of_life":"","warranty_expiry":"","notes":"Goojprnt","components":[],"activity_log":[]},{"id":"imported_17","asset_code":"AST-00017","serial_no":"20231033599","asset_name":"Barcode Scanner - Goojprnt","asset_category":"Barcode Scanner","department":"Warehouse","location":"Apo - Warehouse Checking Area (2nd Floor)","custodian":"Checker Ronnie","status":"Active","purchase_date":"2024-01-31","gross_purchase_amount":0,"supplier":"Lazada","purchase_order":"","expected_end_of_life":"","warranty_expiry":"","notes":"Goojprnt","components":[],"activity_log":[]},{"id":"imported_18","asset_code":"AST-00018","serial_no":"20231033506","asset_name":"Barcode Scanner - Goojprnt","asset_category":"Barcode Scanner","department":"Warehouse","location":"Apo - Warehouse Checking Area (2nd Floor)","custodian":"Checker Jonnel","status":"Active","purchase_date":"2024-01-31","gross_purchase_amount":0,"supplier":"Lazada","purchase_order":"","expected_end_of_life":"","warranty_expiry":"","notes":"Goojprnt","components":[],"activity_log":[]},{"id":"imported_19","asset_code":"AST-00019","serial_no":"20231033557","asset_name":"Barcode Scanner - Goojprnt","asset_category":"Barcode Scanner","department":"Warehouse","location":"Apo - Warehouse Checking Area (2nd Floor)","custodian":"Checker Loloy","status":"Active","purchase_date":"2024-01-31","gross_purchase_amount":0,"supplier":"Lazada","purchase_order":"","expected_end_of_life":"","warranty_expiry":"","notes":"Goojprnt","components":[],"activity_log":[]},{"id":"imported_20","asset_code":"AST-00020","serial_no":"","asset_name":"Printer - Canon G2730","asset_category":"Printer / Scanner","department":"HR","location":"","custodian":"Hr","status":"Scrapped","purchase_date":"2024-02-01","gross_purchase_amount":0,"supplier":"Abenson","purchase_order":"","expected_end_of_life":"","warranty_expiry":"","notes":"Canon G2730","components":[],"activity_log":[]},{"id":"imported_21","asset_code":"AST-00021","serial_no":"X88V3904773","asset_name":"Projector - Epson Eb-E01","asset_category":"Projector","department":"Management","location":"Apo - Management Room","custodian":"Rissa","status":"Active","purchase_date":"2024-02-02","gross_purchase_amount":0,"supplier":"Lazada","purchase_order":"","expected_end_of_life":"","warranty_expiry":"","notes":"Epson Eb-E01","components":[],"activity_log":[]},{"id":"imported_22","asset_code":"AST-00022","serial_no":"","asset_name":"USB - Sandisk 8GB","asset_category":"IT Peripherals & Accessories","department":"HW","location":"Apo - Bullpen","custodian":"","status":"Active","purchase_date":"2024-06-08","gross_purchase_amount":0,"supplier":"Lazada","purchase_order":"","expected_end_of_life":"","warranty_expiry":"","notes":"Sandisk 8Gb","components":[],"activity_log":[]},{"id":"imported_23","asset_code":"AST-00023","serial_no":"","asset_name":"Nvision N190V9 19inch","asset_category":"Monitor","department":"Posh","location":"Posh Cavite","custodian":"","status":"Active","purchase_date":"2024-06-24","gross_purchase_amount":0,"supplier":"","purchase_order":"","expected_end_of_life":"","warranty_expiry":"","notes":"Nvision N190V9","components":[],"activity_log":[]},{"id":"imported_24","asset_code":"AST-00024","serial_no":"","asset_name":"Nvision N190V8 19inch","asset_category":"Monitor","department":"Posh","location":"Posh Q.Ave","custodian":"","status":"Active","purchase_date":"2024-06-24","gross_purchase_amount":0,"supplier":"","purchase_order":"","expected_end_of_life":"","warranty_expiry":"","notes":"Nvision N190V8","components":[],"activity_log":[]},{"id":"imported_25","asset_code":"AST-00025","serial_no":"","asset_name":"Printer - Canon G1730","asset_category":"Printer / Scanner","department":"HW Head Office","location":"","custodian":"","status":"Scrapped","purchase_date":"2024-06-24","gross_purchase_amount":0,"supplier":"","purchase_order":"","expected_end_of_life":"","warranty_expiry":"","notes":"Canon G1730","components":[],"activity_log":[]},{"id":"imported_26","asset_code":"AST-00026","serial_no":"","asset_name":"Impulse Sealer 400Mm - Lazada","asset_category":"Packaging Equipment","department":"Warehouse","location":"Apo - Warehouse Checking Area (2nd Floor)","custodian":"Station1","status":"Active","purchase_date":"2024-07-26","gross_purchase_amount":0,"supplier":"Lazada","purchase_order":"","expected_end_of_life":"","warranty_expiry":"","notes":"Lazada","components":[],"activity_log":[]},{"id":"imported_27","asset_code":"AST-00027","serial_no":"","asset_name":"Impulse Sealer 300Mm","asset_category":"Packaging Equipment","department":"Posh","location":"Posh Q.Ave","custodian":"","status":"Active","purchase_date":"2024-07-26","gross_purchase_amount":0,"supplier":"Lazada","purchase_order":"","expected_end_of_life":"","warranty_expiry":"","notes":"Posh Q.Ave","components":[],"activity_log":[]},{"id":"imported_28","asset_code":"AST-00028","serial_no":"","asset_name":"Microwave - Samsung","asset_category":"Kitchen Appliance","department":"Admin","location":"Apo - Bullpen","custodian":"Rissa","status":"Active","purchase_date":"2024-08-01","gross_purchase_amount":0,"supplier":"Abenson","purchase_order":"","expected_end_of_life":"","warranty_expiry":"","notes":"Samsung","components":[],"activity_log":[]},{"id":"imported_29","asset_code":"AST-00029","serial_no":"","asset_name":"Ups - Apc Back-Ups 650","asset_category":"UPS / AVR","department":"Enfant Shop","location":"EF3 SM Fairview","custodian":"","status":"Active","purchase_date":"2024-08-20","gross_purchase_amount":0,"supplier":"","purchase_order":"","expected_end_of_life":"","warranty_expiry":"","notes":"Apc Back-Ups 650","components":[],"activity_log":[]},{"id":"imported_30","asset_code":"AST-00030","serial_no":"","asset_name":"Wifi Stick","asset_category":"Network Equipment","department":"Enfant Shop","location":"EF32 Greenhills","custodian":"Greenhills","status":"Active","purchase_date":"2024-08-20","gross_purchase_amount":0,"supplier":"Lazada","purchase_order":"","expected_end_of_life":"","warranty_expiry":"","notes":"Wireless Usb Adapter","components":[],"activity_log":[]},{"id":"imported_31","asset_code":"AST-00031","serial_no":"","asset_name":"USB - Sandisk 16GB","asset_category":"IT Peripherals & Accessories","department":"CM / CP / EF Coordinator","location":"Pineda Office","custodian":"","status":"Active","purchase_date":"2024-08-20","gross_purchase_amount":0,"supplier":"Lazada","purchase_order":"","expected_end_of_life":"","warranty_expiry":"","notes":"Sandisk 16Gb","components":[],"activity_log":[]},{"id":"imported_32","asset_code":"AST-00032","serial_no":"","asset_name":"Wifi Stick","asset_category":"Network Equipment","department":"CM / CP / EF Coordinator","location":"Pineda Office","custodian":"Thalia","status":"Active","purchase_date":"2024-08-20","gross_purchase_amount":0,"supplier":"Lazada","purchase_order":"","expected_end_of_life":"","warranty_expiry":"","notes":"","components":[],"activity_log":[]},{"id":"imported_33","asset_code":"AST-00033","serial_no":"","asset_name":"Keyboard","asset_category":"IT Peripherals & Accessories","department":"IT","location":"Pineda Office","custodian":"Jeff","status":"Active","purchase_date":"2024-08-29","gross_purchase_amount":0,"supplier":"","purchase_order":"","expected_end_of_life":"","warranty_expiry":"","notes":"","components":[],"activity_log":[]},{"id":"imported_34","asset_code":"AST-00034","serial_no":"","asset_name":"Printer - Canon G3730","asset_category":"Printer / Scanner","department":"HW Head Office","location":"","custodian":"","status":"Scrapped","purchase_date":"2024-09-17","gross_purchase_amount":0,"supplier":"","purchase_order":"","expected_end_of_life":"","warranty_expiry":"","notes":"Canon G3730","components":[],"activity_log":[]},{"id":"imported_35","asset_code":"AST-00035","serial_no":"","asset_name":"Keyboard - Hp Km100","asset_category":"IT Peripherals & Accessories","department":"CM / CP / EF Coordinator","location":"Pineda Office","custodian":"Christine Asupra","status":"Active","purchase_date":"2024-09-24","gross_purchase_amount":0,"supplier":"","purchase_order":"","expected_end_of_life":"","warranty_expiry":"","notes":"Hp Km100","components":[],"activity_log":[]},{"id":"imported_36","asset_code":"AST-00036","serial_no":"","asset_name":"Keyboard - Hp Km101","asset_category":"IT Peripherals & Accessories","department":"CM / CP / EF Coordinator","location":"Pineda Office","custodian":"Mary Ann Alonzaga","status":"Active","purchase_date":"2024-09-24","gross_purchase_amount":0,"supplier":"","purchase_order":"","expected_end_of_life":"","warranty_expiry":"","notes":"Hp Km101","components":[],"activity_log":[]},{"id":"imported_37","asset_code":"AST-00037","serial_no":"","asset_name":"Nvision N190V8 19inch","asset_category":"Monitor","department":"Accounting","location":"Pineda Office","custodian":"Accounting/April","status":"Scrapped","purchase_date":"2024-09-24","gross_purchase_amount":0,"supplier":"","purchase_order":"","expected_end_of_life":"","warranty_expiry":"","notes":"Nvision N190 V8","components":[],"activity_log":[]},{"id":"imported_38","asset_code":"AST-00038","serial_no":"","asset_name":"Mouse - Hp Km100","asset_category":"IT Peripherals & Accessories","department":"Posh","location":"Posh Q.Ave","custodian":"","status":"Active","purchase_date":"2024-09-24","gross_purchase_amount":0,"supplier":"","purchase_order":"","expected_end_of_life":"","warranty_expiry":"","notes":"Hp Km100","components":[],"activity_log":[]},{"id":"imported_39","asset_code":"AST-00039","serial_no":"","asset_name":"Calculator - Casio Hr100Rc","asset_category":"Calculator","department":"Accounting","location":"Pineda Office","custodian":"","status":"Active","purchase_date":"2024-10-10","gross_purchase_amount":0,"supplier":"","purchase_order":"","expected_end_of_life":"","warranty_expiry":"","notes":"Casio Hr100Rc","components":[],"activity_log":[]},{"id":"imported_40","asset_code":"AST-00040","serial_no":"","asset_name":"Wifi Stick","asset_category":"Network Equipment","department":"CM / CP / EF Coordinator","location":"Pineda Office","custodian":"Bibay","status":"Active","purchase_date":"2024-10-18","gross_purchase_amount":0,"supplier":"","purchase_order":"","expected_end_of_life":"","warranty_expiry":"","notes":"Wireless Usb Adapter","components":[],"activity_log":[]},{"id":"imported_41","asset_code":"AST-00041","serial_no":"","asset_name":"Water Dispenser - Dowell","asset_category":"Kitchen Appliance","department":"HW","location":"HW TSP","custodian":"","status":"Active","purchase_date":"2024-10-21","gross_purchase_amount":0,"supplier":"","purchase_order":"","expected_end_of_life":"","warranty_expiry":"","notes":"Dowell","components":[],"activity_log":[]},{"id":"imported_42","asset_code":"AST-00042","serial_no":"","asset_name":"Keyboard - Hp Km100","asset_category":"IT Peripherals & Accessories","department":"Dispatch","location":"Apo - Dispatch","custodian":"","status":"Active","purchase_date":"2024-10-31","gross_purchase_amount":0,"supplier":"","purchase_order":"","expected_end_of_life":"","warranty_expiry":"","notes":"Hp Km100","components":[],"activity_log":[]},{"id":"imported_43","asset_code":"AST-00043","serial_no":"","asset_name":"Ladder - Collapsible Ladder","asset_category":"Hand Tools","department":"Maintenance","location":"Apo - Warehouse Loading Bay","custodian":"","status":"Active","purchase_date":"2024-11-07","gross_purchase_amount":0,"supplier":"Lazada","purchase_order":"","expected_end_of_life":"","warranty_expiry":"","notes":"Collapsible Ladder","components":[],"activity_log":[]},{"id":"imported_44","asset_code":"AST-00044","serial_no":"","asset_name":"Printer - Canon G1730","asset_category":"Printer / Scanner","department":"HW Head Office","location":"","custodian":"","status":"Scrapped","purchase_date":"2024-11-19","gross_purchase_amount":0,"supplier":"","purchase_order":"","expected_end_of_life":"","warranty_expiry":"","notes":"Canon G1730","components":[],"activity_log":[]},{"id":"imported_45","asset_code":"AST-00045","serial_no":"","asset_name":"Keyboard","asset_category":"IT Peripherals & Accessories","department":"Accounting","location":"Pineda Office","custodian":"","status":"Active","purchase_date":"2024-11-21","gross_purchase_amount":0,"supplier":"","purchase_order":"","expected_end_of_life":"","warranty_expiry":"","notes":"","components":[],"activity_log":[]},{"id":"imported_46","asset_code":"AST-00046","serial_no":"","asset_name":"Usb - 4 Port Usb Charger (Qicent)","asset_category":"IT Peripherals & Accessories","department":"","location":"","custodian":"","status":"Scrapped","purchase_date":"2024-11-21","gross_purchase_amount":0,"supplier":"","purchase_order":"","expected_end_of_life":"","warranty_expiry":"","notes":"4 Port Usb Charger (Qicent)","components":[],"activity_log":[]},{"id":"imported_47","asset_code":"AST-00047","serial_no":"","asset_name":"Nvision N190V8 19inch","asset_category":"Monitor","department":"CM / CP / EF Coordinator","location":"Pineda Office","custodian":"Lenlen","status":"Active","purchase_date":"2024-11-27","gross_purchase_amount":0,"supplier":"","purchase_order":"","expected_end_of_life":"","warranty_expiry":"","notes":"Nvision N1190V8","components":[],"activity_log":[]},{"id":"imported_48","asset_code":"AST-00048","serial_no":"","asset_name":"Vault - Vault Posh Cavite","asset_category":"Safe / Vault","department":"Posh","location":"Posh Cavite","custodian":"","status":"Active","purchase_date":"2024-12-20","gross_purchase_amount":0,"supplier":"Protech","purchase_order":"","expected_end_of_life":"","warranty_expiry":"","notes":"Vault Posh Cavite","components":[],"activity_log":[]},{"id":"imported_49","asset_code":"AST-00049","serial_no":"","asset_name":"Keyboard - Hp Km100 Gaming Keyboard","asset_category":"IT Peripherals & Accessories","department":"HW","location":"Apo - Bullpen","custodian":"Hokkwell","status":"Active","purchase_date":"2025-01-06","gross_purchase_amount":0,"supplier":"Shopee","purchase_order":"","expected_end_of_life":"","warranty_expiry":"","notes":"Hp Km100 Gaming Keyboard","components":[],"activity_log":[]},{"id":"imported_50","asset_code":"AST-00050","serial_no":"","asset_name":"Keyboard - Hp Km100 Gaming Keyboard","asset_category":"IT Peripherals & Accessories","department":"Customer Order / Invoicing","location":"Apo - Warehouse Checking Area (2nd Floor)","custodian":"Jolina","status":"Active","purchase_date":"2025-02-07","gross_purchase_amount":0,"supplier":"Shopee","purchase_order":"","expected_end_of_life":"","warranty_expiry":"","notes":"Hp Km100 Gaming Keyboard","components":[],"activity_log":[]},{"id":"imported_51","asset_code":"AST-00051","serial_no":"","asset_name":"Mouse - Hp Km100 Mouse","asset_category":"IT Peripherals & Accessories","department":"Customer Order / Invoicing","location":"Apo - Bullpen","custodian":"Minda","status":"Active","purchase_date":"2025-02-10","gross_purchase_amount":0,"supplier":"","purchase_order":"","expected_end_of_life":"","warranty_expiry":"","notes":"Hp Km100 Mouse","components":[],"activity_log":[]},{"id":"imported_52","asset_code":"AST-00052","serial_no":"","asset_name":"Mouse - Hp Km100 Mouse","asset_category":"IT Peripherals & Accessories","department":"Dispatch","location":"Apo - Dispatch","custodian":"K","status":"Active","purchase_date":"2025-02-12","gross_purchase_amount":0,"supplier":"","purchase_order":"","expected_end_of_life":"","warranty_expiry":"","notes":"Hp Km100 Mouse","components":[],"activity_log":[]},{"id":"imported_53","asset_code":"AST-00053","serial_no":"","asset_name":"Keyboard - Hp Km100 Keyboard","asset_category":"IT Peripherals & Accessories","department":"Dispatch","location":"Apo - Dispatch","custodian":"K","status":"Active","purchase_date":"2025-02-12","gross_purchase_amount":0,"supplier":"","purchase_order":"","expected_end_of_life":"","warranty_expiry":"","notes":"Hp Km100 Keyboard","components":[],"activity_log":[]},{"id":"imported_54","asset_code":"AST-00054","serial_no":"","asset_name":"Nvision N190V8 19inch","asset_category":"Monitor","department":"Dispatch","location":"Apo - Dispatch","custodian":"K","status":"Active","purchase_date":"2025-02-12","gross_purchase_amount":0,"supplier":"","purchase_order":"","expected_end_of_life":"","warranty_expiry":"","notes":"Hikvision N190Hd V8 19\"","components":[],"activity_log":[]},{"id":"imported_55","asset_code":"AST-00055","serial_no":"","asset_name":"Keyboard - Hp Km100 Keyboard","asset_category":"IT Peripherals & Accessories","department":"Warehouse","location":"Apo - Warehouse Checking Area (2nd Floor)","custodian":"Benjie","status":"Scrapped","purchase_date":"2025-02-19","gross_purchase_amount":0,"supplier":"Easy Pc","purchase_order":"","expected_end_of_life":"","warranty_expiry":"","notes":"Hp Km100 Keyboard","components":[],"activity_log":[]},{"id":"imported_56","asset_code":"AST-00056","serial_no":"","asset_name":"Mouse - Hp Km100 Mouse","asset_category":"IT Peripherals & Accessories","department":"Sales","location":"EF4 Festival Mall","custodian":"","status":"Active","purchase_date":"2025-03-04","gross_purchase_amount":0,"supplier":"Easy Pc","purchase_order":"","expected_end_of_life":"","warranty_expiry":"","notes":"Hp Km100 Mouse","components":[],"activity_log":[]},{"id":"imported_57","asset_code":"AST-00057","serial_no":"","asset_name":"Keyboard - Hp Km100 Keyboard","asset_category":"IT Peripherals & Accessories","department":"Sales","location":"Apo - Bullpen","custodian":"Kar","status":"Active","purchase_date":"2025-03-10","gross_purchase_amount":0,"supplier":"Easy Pc","purchase_order":"","expected_end_of_life":"","warranty_expiry":"","notes":"Hp Km100 Keyboard","components":[],"activity_log":[]},{"id":"imported_58","asset_code":"AST-00058","serial_no":"","asset_name":"Mouse - Hp Km100 Mouse","asset_category":"IT Peripherals & Accessories","department":"Sales","location":"Apo - Bullpen","custodian":"Kar","status":"Active","purchase_date":"2025-03-10","gross_purchase_amount":0,"supplier":"Easy Pc","purchase_order":"","expected_end_of_life":"","warranty_expiry":"","notes":"Hp Km100 Mouse","components":[],"activity_log":[]},{"id":"imported_59","asset_code":"AST-00059","serial_no":"","asset_name":"Nvision N190V8 19inch","asset_category":"Monitor","department":"Sales","location":"Apo - Bullpen","custodian":"Kar","status":"Active","purchase_date":"2025-03-10","gross_purchase_amount":0,"supplier":"Easy Pc","purchase_order":"","expected_end_of_life":"","warranty_expiry":"","notes":"N-Vision N190Hd V8","components":[],"activity_log":[]},{"id":"imported_60","asset_code":"AST-00060","serial_no":"","asset_name":"Wifi Stick","asset_category":"Network Equipment","department":"Dispatch","location":"Apo - Dispatch","custodian":"K","status":"Active","purchase_date":"2025-03-10","gross_purchase_amount":0,"supplier":"Easy Pc","purchase_order":"","expected_end_of_life":"","warranty_expiry":"","notes":"Wireless Usb Adapter","components":[],"activity_log":[]},{"id":"imported_61","asset_code":"AST-00061","serial_no":"","asset_name":"Barcode Scanner - Goojprt Gp-Wx2D","asset_category":"Barcode Scanner","department":"Online Shopping","location":"Apo - Online Shopping","custodian":"Luisa","status":"Scrapped","purchase_date":"2025-03-19","gross_purchase_amount":0,"supplier":"","purchase_order":"","expected_end_of_life":"","warranty_expiry":"","notes":"Goojprt Gp-Wx2D","components":[],"activity_log":[]},{"id":"imported_62","asset_code":"AST-00062","serial_no":"9B2431A24551","asset_name":"Ups - Apc Bx2200Mi-Ms","asset_category":"UPS / AVR","department":"IT","location":"Pineda Office","custodian":"System Server - Jeff","status":"Active","purchase_date":"2025-03-27","gross_purchase_amount":0,"supplier":"Lazada","purchase_order":"","expected_end_of_life":"","warranty_expiry":"","notes":"Apc Bx2200Mi-Ms","components":[],"activity_log":[]},{"id":"imported_63","asset_code":"AST-00063","serial_no":"SN:58807/64ZK07382","asset_name":"Poco C75 8GB Ram 256GB","asset_category":"Mobile Phone","department":"Posh","location":"Posh Q.Ave","custodian":"","status":"Active","purchase_date":"2025-03-27","gross_purchase_amount":0,"supplier":"Lazada","purchase_order":"","expected_end_of_life":"","warranty_expiry":"","notes":"Poco C75 8Gb Ram 256Gb","components":[],"activity_log":[]},{"id":"imported_64","asset_code":"AST-00064","serial_no":"","asset_name":"Biometrics - Ng Teco Time & Attendance","asset_category":"Biometrics","department":"Posh","location":"Posh Las Pinas","custodian":"","status":"In Stock (Undeployed)","purchase_date":"2025-04-03","gross_purchase_amount":0,"supplier":"Lazada","purchase_order":"","expected_end_of_life":"","warranty_expiry":"","notes":"Ng Teco Time & Attendance","components":[],"activity_log":[]},{"id":"imported_65","asset_code":"AST-00065","serial_no":"WX12A94KKDCJ","asset_name":"External Hard Drive Ssd - Wd My Passport 1Tb","asset_category":"IT Peripherals & Accessories","department":"IT","location":"Pineda Office","custodian":"Jeff","status":"Active","purchase_date":"2025-04-07","gross_purchase_amount":0,"supplier":"Lazada","purchase_order":"","expected_end_of_life":"","warranty_expiry":"","notes":"Wd My Passport 1Tb","components":[],"activity_log":[]},{"id":"imported_66","asset_code":"AST-00066","serial_no":"","asset_name":"Poco C75 8GB Ram 256GB","asset_category":"Mobile Phone","department":"Posh","location":"Posh Las Pinas","custodian":"","status":"Active","purchase_date":"2025-04-07","gross_purchase_amount":0,"supplier":"Lazada","purchase_order":"","expected_end_of_life":"","warranty_expiry":"","notes":"Poco C75 8Gb Ram 256Gb","components":[],"activity_log":[]},{"id":"imported_67","asset_code":"AST-00067","serial_no":"805398877482","asset_name":"Wifi Stick","asset_category":"Network Equipment","department":"Customer Order / Invoicing","location":"Apo - Warehouse Checking Area (2nd Floor)","custodian":"Mary","status":"Active","purchase_date":"2025-04-22","gross_purchase_amount":0,"supplier":"Lazada","purchase_order":"","expected_end_of_life":"","warranty_expiry":"","notes":"Usb Wifi 5 Wireless Adapter","components":[],"activity_log":[]},{"id":"imported_68","asset_code":"AST-00068","serial_no":"","asset_name":"Keyboard - Hp Km100 Keyboard","asset_category":"IT Peripherals & Accessories","department":"HW","location":"Apo - Bullpen","custodian":"Lyka","status":"Active","purchase_date":"2025-05-02","gross_purchase_amount":0,"supplier":"Easypc","purchase_order":"","expected_end_of_life":"","warranty_expiry":"","notes":"Hp Km100 Keyboard","components":[],"activity_log":[]},{"id":"imported_69","asset_code":"AST-00069","serial_no":"","asset_name":"Printer - Epson L121","asset_category":"Printer / Scanner","department":"HW","location":"Apo - Bullpen","custodian":"Hokkwell","status":"Active","purchase_date":"2025-05-02","gross_purchase_amount":0,"supplier":"Shopee","purchase_order":"","expected_end_of_life":"","warranty_expiry":"","notes":"Epson L121","components":[],"activity_log":[]},{"id":"imported_70","asset_code":"AST-00070","serial_no":"","asset_name":"Mouse - Hp Km100","asset_category":"IT Peripherals & Accessories","department":"Sales","location":"Apo - Bullpen","custodian":"Trixie","status":"Active","purchase_date":"2025-05-02","gross_purchase_amount":0,"supplier":"Easy-Pc","purchase_order":"","expected_end_of_life":"","warranty_expiry":"","notes":"Hp Km100","components":[],"activity_log":[]},{"id":"imported_71","asset_code":"AST-00071","serial_no":"","asset_name":"Mouse - Km100 Gaming Mouse","asset_category":"IT Peripherals & Accessories","department":"Customer Order / Invoicing","location":"Apo - Online Shopping","custodian":"Ambe","status":"Active","purchase_date":"2025-05-02","gross_purchase_amount":0,"supplier":"Easy Pc","purchase_order":"","expected_end_of_life":"","warranty_expiry":"","notes":"Km100 Gaming Mouse","components":[],"activity_log":[]},{"id":"imported_72","asset_code":"AST-00072","serial_no":"","asset_name":"Printer - Epson L121","asset_category":"Printer / Scanner","department":"Customer Order / Invoicing","location":"Apo - Online Shopping","custodian":"Ambe","status":"Active","purchase_date":"2025-05-02","gross_purchase_amount":0,"supplier":"Shopee","purchase_order":"","expected_end_of_life":"","warranty_expiry":"","notes":"Epson L121","components":[],"activity_log":[]},{"id":"imported_73","asset_code":"AST-00073","serial_no":"","asset_name":"Keyboard - Hp Km100 Keyboard","asset_category":"IT Peripherals & Accessories","department":"Online Shopping","location":"Apo - Online Shopping","custodian":"Richelle","status":"Active","purchase_date":"2025-05-02","gross_purchase_amount":0,"supplier":"Easypc","purchase_order":"","expected_end_of_life":"","warranty_expiry":"","notes":"Hp Km100 Keyboard","components":[],"activity_log":[]},{"id":"imported_74","asset_code":"AST-00074","serial_no":"","asset_name":"Keyboard - Hp Km100 Keyboard","asset_category":"IT Peripherals & Accessories","department":"Accounting","location":"Pineda Office","custodian":"April Gotivo","status":"Active","purchase_date":"2025-05-02","gross_purchase_amount":0,"supplier":"Easy Pc","purchase_order":"","expected_end_of_life":"","warranty_expiry":"","notes":"Hp Km100 Keyboard","components":[],"activity_log":[]},{"id":"imported_75","asset_code":"AST-00075","serial_no":"","asset_name":"Keyboard - Hp Km100 Keyboard","asset_category":"IT Peripherals & Accessories","department":"Accounting","location":"Pineda Office","custodian":"Judd","status":"Active","purchase_date":"2025-05-02","gross_purchase_amount":0,"supplier":"Easy Pc","purchase_order":"","expected_end_of_life":"","warranty_expiry":"","notes":"Hp Km100 Keyboard","components":[],"activity_log":[]},{"id":"imported_76","asset_code":"AST-00076","serial_no":"","asset_name":"Keyboard - Hp Km100 Keyboard","asset_category":"IT Peripherals & Accessories","department":"CM / CP / EF Coordinator","location":"Pineda Office","custodian":"Thalia","status":"Active","purchase_date":"2025-05-02","gross_purchase_amount":0,"supplier":"Easypc","purchase_order":"","expected_end_of_life":"","warranty_expiry":"","notes":"Hp Km100 Keyboard","components":[],"activity_log":[]},{"id":"imported_77","asset_code":"AST-00077","serial_no":"","asset_name":"Keyboard - Hp Km100 Keyboard","asset_category":"IT Peripherals & Accessories","department":"CM / CP / EF Coordinator","location":"Pineda Office","custodian":"Beng","status":"Active","purchase_date":"2025-05-02","gross_purchase_amount":0,"supplier":"Easypc","purchase_order":"","expected_end_of_life":"","warranty_expiry":"","notes":"Hp Km100 Keyboard","components":[],"activity_log":[]},{"id":"imported_78","asset_code":"AST-00078","serial_no":"","asset_name":"Mouse - Hp Km100","asset_category":"IT Peripherals & Accessories","department":"CM / CP / EF Coordinator","location":"Pineda Office","custodian":"Thalia","status":"Active","purchase_date":"2025-05-02","gross_purchase_amount":0,"supplier":"Easypc","purchase_order":"","expected_end_of_life":"","warranty_expiry":"","notes":"Hp Km100","components":[],"activity_log":[]},{"id":"imported_79","asset_code":"AST-00079","serial_no":"","asset_name":"Keyboard - Hp Km100 Keyboard","asset_category":"IT Peripherals & Accessories","department":"Posh","location":"Posh Las Pinas","custodian":"Cam","status":"Active","purchase_date":"2025-05-02","gross_purchase_amount":0,"supplier":"Easy Pc","purchase_order":"","expected_end_of_life":"","warranty_expiry":"","notes":"Hp Km100 Keyboard","components":[],"activity_log":[]},{"id":"imported_80","asset_code":"AST-00080","serial_no":"","asset_name":"Keyboard - Hp Km100 Keyboard","asset_category":"IT Peripherals & Accessories","department":"Posh","location":"Posh Las Pinas","custodian":"Cam","status":"Active","purchase_date":"2025-05-02","gross_purchase_amount":0,"supplier":"Easy Pc","purchase_order":"","expected_end_of_life":"","warranty_expiry":"","notes":"Hp Km100 Keyboard","components":[],"activity_log":[]},{"id":"imported_81","asset_code":"AST-00081","serial_no":"","asset_name":"Mouse - Km100 Mouse Hp","asset_category":"IT Peripherals & Accessories","department":"Posh","location":"Posh Las Pinas","custodian":"","status":"Active","purchase_date":"2025-05-02","gross_purchase_amount":0,"supplier":"Easy Pc","purchase_order":"","expected_end_of_life":"","warranty_expiry":"","notes":"Km100 Mouse Hp","components":[],"activity_log":[]},{"id":"imported_82","asset_code":"AST-00082","serial_no":"","asset_name":"Mouse - Km100 Mouse Hp","asset_category":"IT Peripherals & Accessories","department":"Posh","location":"Posh Las Pinas","custodian":"","status":"Active","purchase_date":"2025-05-02","gross_purchase_amount":0,"supplier":"Easy Pc","purchase_order":"","expected_end_of_life":"","warranty_expiry":"","notes":"Km100 Mouse Hp","components":[],"activity_log":[]},{"id":"imported_83","asset_code":"AST-00083","serial_no":"","asset_name":"Nvision N200HD V8","asset_category":"Monitor","department":"Posh","location":"Posh Las Pinas","custodian":"Cam","status":"Active","purchase_date":"2025-05-02","gross_purchase_amount":0,"supplier":"Easy Pc","purchase_order":"","expected_end_of_life":"","warranty_expiry":"","notes":"Nvision N200Hd V8","components":[],"activity_log":[]},{"id":"imported_84","asset_code":"AST-00084","serial_no":"","asset_name":"Nvision N200HD V8","asset_category":"Monitor","department":"Posh","location":"Posh Las Pinas","custodian":"Cam","status":"Active","purchase_date":"2025-05-02","gross_purchase_amount":0,"supplier":"Easy Pc","purchase_order":"","expected_end_of_life":"","warranty_expiry":"","notes":"Nvision N200Hd V8","components":[],"activity_log":[]},{"id":"imported_85","asset_code":"AST-00085","serial_no":"","asset_name":"Printer - Epson L121","asset_category":"Printer / Scanner","department":"Posh","location":"Posh Las Pinas","custodian":"","status":"Active","purchase_date":"2025-05-02","gross_purchase_amount":0,"supplier":"Shopee","purchase_order":"","expected_end_of_life":"","warranty_expiry":"","notes":"Epson L121","components":[],"activity_log":[]},{"id":"imported_86","asset_code":"AST-00086","serial_no":"","asset_name":"Barcode Scanner - Eyoyo 2D Barcode Scanner","asset_category":"Barcode Scanner","department":"Posh","location":"Posh Las Pinas","custodian":"Cam","status":"Active","purchase_date":"2025-05-10","gross_purchase_amount":0,"supplier":"Shopee","purchase_order":"","expected_end_of_life":"","warranty_expiry":"","notes":"Eyoyo 2D Barcode Scanner","components":[],"activity_log":[]},{"id":"imported_87","asset_code":"AST-00087","serial_no":"","asset_name":"Barcode Scanner - Eyoyo 2D Barcode Scanner","asset_category":"Barcode Scanner","department":"Posh","location":"Posh Las Pinas","custodian":"Cam","status":"Active","purchase_date":"2025-05-10","gross_purchase_amount":0,"supplier":"Shopee","purchase_order":"","expected_end_of_life":"","warranty_expiry":"","notes":"Eyoyo 2D Barcode Scanner","components":[],"activity_log":[]},{"id":"imported_88","asset_code":"AST-00088","serial_no":"","asset_name":"Biometrics - Ngeco As10","asset_category":"Biometrics","department":"","location":"","custodian":"","status":"Active","purchase_date":"2025-05-10","gross_purchase_amount":0,"supplier":"Shopee","purchase_order":"","expected_end_of_life":"","warranty_expiry":"","notes":"Ngeco As10","components":[],"activity_log":[]},{"id":"imported_89","asset_code":"AST-00089","serial_no":"","asset_name":"Wifi Stick - Bt Plus Ac 600","asset_category":"Network Equipment","department":"Posh","location":"","custodian":"","status":"Active","purchase_date":"2025-05-10","gross_purchase_amount":0,"supplier":"Easy Pc","purchase_order":"","expected_end_of_life":"","warranty_expiry":"","notes":"Bt Plus Ac 600","components":[],"activity_log":[]},{"id":"imported_90","asset_code":"AST-00090","serial_no":"","asset_name":"Wifi Stick - Bt Plus Ac 600","asset_category":"Network Equipment","department":"Posh","location":"","custodian":"","status":"Active","purchase_date":"2025-05-10","gross_purchase_amount":0,"supplier":"Easy Pc","purchase_order":"","expected_end_of_life":"","warranty_expiry":"","notes":"Bt Plus Ac 600","components":[],"activity_log":[]},{"id":"imported_91","asset_code":"AST-00091","serial_no":"","asset_name":"Cash Drawer","asset_category":"Cash Drawer","department":"Posh","location":"Posh Las Pinas","custodian":"Cam","status":"Active","purchase_date":"2025-05-15","gross_purchase_amount":0,"supplier":"Shopee","purchase_order":"","expected_end_of_life":"","warranty_expiry":"","notes":"Cash Drawer","components":[],"activity_log":[]},{"id":"imported_92","asset_code":"AST-00092","serial_no":"","asset_name":"Cash Drawer","asset_category":"Cash Drawer","department":"Posh","location":"Posh Las Pinas","custodian":"Cam","status":"Active","purchase_date":"2025-05-15","gross_purchase_amount":0,"supplier":"Shopee","purchase_order":"","expected_end_of_life":"","warranty_expiry":"","notes":"Cash Drawer","components":[],"activity_log":[]},{"id":"imported_93","asset_code":"AST-00093","serial_no":"","asset_name":"Barcode Scanner - Eyoyo Ey-034W","asset_category":"Barcode Scanner","department":"Online Shopping","location":"Apo - Online Shopping","custodian":"Richelle","status":"Active","purchase_date":"2025-06-10","gross_purchase_amount":0,"supplier":"","purchase_order":"","expected_end_of_life":"","warranty_expiry":"","notes":"Eyoyo Ey-034W","components":[],"activity_log":[]},{"id":"imported_94","asset_code":"AST-00094","serial_no":"","asset_name":"Konka 32 Inches","asset_category":"Monitor","department":"HW","location":"HW TSP","custodian":"","status":"Scrapped","purchase_date":"2025-06-10","gross_purchase_amount":0,"supplier":"","purchase_order":"","expected_end_of_life":"","warranty_expiry":"","notes":"Konka 32 Inches","components":[],"activity_log":[]},{"id":"imported_95","asset_code":"AST-00095","serial_no":"","asset_name":"Keyboard - Hp Km100 Keyboard","asset_category":"IT Peripherals & Accessories","department":"Online Shopping","location":"Pineda Office","custodian":"Mmr Lazada","status":"Active","purchase_date":"2025-06-23","gross_purchase_amount":0,"supplier":"Easy Pc","purchase_order":"","expected_end_of_life":"","warranty_expiry":"","notes":"Hp Km100 Keyboard","components":[],"activity_log":[]},{"id":"imported_96","asset_code":"AST-00096","serial_no":"","asset_name":"Keyboard - Hp Km100 Keyboard","asset_category":"IT Peripherals & Accessories","department":"Online Shopping","location":"Pineda Office","custodian":"Mmr Lazada","status":"Active","purchase_date":"2025-06-23","gross_purchase_amount":0,"supplier":"Easy Pc","purchase_order":"","expected_end_of_life":"","warranty_expiry":"","notes":"Hp Km100 Keyboard","components":[],"activity_log":[]},{"id":"imported_97","asset_code":"AST-00097","serial_no":"","asset_name":"Mouse - Km100 Mouse Hp","asset_category":"IT Peripherals & Accessories","department":"Online Shopping","location":"Pineda Office","custodian":"Mmr Lazada","status":"Active","purchase_date":"2025-06-23","gross_purchase_amount":0,"supplier":"Easy Pc","purchase_order":"","expected_end_of_life":"","warranty_expiry":"","notes":"Km100 Mouse Hp","components":[],"activity_log":[]},{"id":"imported_98","asset_code":"AST-00098","serial_no":"","asset_name":"Huawei MateBook D 15","asset_category":"Laptop","department":"Marketing","location":"Apo - Bullpen","custodian":"Toni","status":"Active","purchase_date":"2025-06-25","gross_purchase_amount":0,"supplier":"","purchase_order":"","expected_end_of_life":"","warranty_expiry":"","notes":"Huawei Mate Book D 15","components":[],"activity_log":[]},{"id":"imported_99","asset_code":"AST-00099","serial_no":"","asset_name":"Huawei MateBook D 15","asset_category":"Laptop","department":"Pet Nation","location":"Pet Nation","custodian":"Anna","status":"Active","purchase_date":"2025-06-25","gross_purchase_amount":0,"supplier":"","purchase_order":"","expected_end_of_life":"","warranty_expiry":"","notes":"Huawei Mate Book D 15","components":[],"activity_log":[]},{"id":"imported_100","asset_code":"AST-00100","serial_no":"","asset_name":"Wireless Microphone - Hollyland Lark A1","asset_category":"AV Equipment","department":"Marketing","location":"Apo - Bullpen","custodian":"Toni","status":"Active","purchase_date":"2025-07-12","gross_purchase_amount":0,"supplier":"Shopee","purchase_order":"","expected_end_of_life":"","warranty_expiry":"","notes":"Hollyland Lark A1","components":[],"activity_log":[]},{"id":"imported_101","asset_code":"AST-00101","serial_no":"","asset_name":"Telephone - Panasonic Kx-Ts500Mx","asset_category":"Telephone / PABX","department":"Online Shopping","location":"Apo - Online Shopping","custodian":"Richelle","status":"Active","purchase_date":"2025-07-24","gross_purchase_amount":0,"supplier":"","purchase_order":"","expected_end_of_life":"","warranty_expiry":"","notes":"Panasonic Kx-Ts500Mx","components":[],"activity_log":[]},{"id":"imported_102","asset_code":"AST-00102","serial_no":"","asset_name":"Nvision N190V8 19inch","asset_category":"Monitor","department":"Online Shopping","location":"Pineda Office","custodian":"Andrea Bragais","status":"Active","purchase_date":"2025-07-24","gross_purchase_amount":0,"supplier":"Easy Pc","purchase_order":"","expected_end_of_life":"","warranty_expiry":"","notes":"Nvision N1190V8","components":[],"activity_log":[]},{"id":"imported_103","asset_code":"AST-00103","serial_no":"","asset_name":"Monitor - Ai Vision","asset_category":"Monitor","department":"Accounting","location":"Pineda Office","custodian":"Rhaine Bioco","status":"Active","purchase_date":"2025-07-26","gross_purchase_amount":0,"supplier":"","purchase_order":"","expected_end_of_life":"","warranty_expiry":"","notes":"Ai Vision","components":[],"activity_log":[]},{"id":"imported_104","asset_code":"AST-00104","serial_no":"","asset_name":"Printer - Epson L121","asset_category":"Printer / Scanner","department":"Accounting","location":"Pineda Office","custodian":"Jude","status":"Active","purchase_date":"2025-08-18","gross_purchase_amount":0,"supplier":"Shopee","purchase_order":"","expected_end_of_life":"","warranty_expiry":"","notes":"Epson L121","components":[],"activity_log":[]},{"id":"imported_105","asset_code":"AST-00105","serial_no":"","asset_name":"Printer - Epson L3210","asset_category":"Printer / Scanner","department":"CM / CP / EF Coordinator","location":"Pineda Office","custodian":"Mary Ann","status":"Active","purchase_date":"2025-08-18","gross_purchase_amount":0,"supplier":"Shopee","purchase_order":"","expected_end_of_life":"","warranty_expiry":"","notes":"Epson L3210","components":[],"activity_log":[]},{"id":"imported_106","asset_code":"AST-00106","serial_no":"","asset_name":"Huawei MateBook D 15","asset_category":"Laptop","department":"IT","location":"Apo - Bullpen","custodian":"Hazel","status":"Active","purchase_date":"2025-09-01","gross_purchase_amount":0,"supplier":"","purchase_order":"","expected_end_of_life":"","warranty_expiry":"","notes":"Programmer Laptop","components":[],"activity_log":[]},{"id":"imported_107","asset_code":"AST-00107","serial_no":"","asset_name":"Electric Fan","asset_category":"Electric Fan","department":"Online Shopping","location":"Apo - Online Shopping","custodian":"Laz/Shpe","status":"Active","purchase_date":"2025-09-06","gross_purchase_amount":0,"supplier":"","purchase_order":"","expected_end_of_life":"","warranty_expiry":"","notes":"","components":[],"activity_log":[]},{"id":"imported_108","asset_code":"AST-00108","serial_no":"","asset_name":"Electric Fan","asset_category":"Electric Fan","department":"Online Shopping","location":"Apo - Online Shopping","custodian":"Laz/Shpe","status":"Active","purchase_date":"2025-09-06","gross_purchase_amount":0,"supplier":"","purchase_order":"","expected_end_of_life":"","warranty_expiry":"","notes":"","components":[],"activity_log":[]},{"id":"imported_109","asset_code":"AST-00109","serial_no":"","asset_name":"Calculator - Casio Hr100Rc","asset_category":"Calculator","department":"CM / CP / EF Coordinator","location":"Pineda Office","custodian":"Gelai","status":"Active","purchase_date":"2025-09-08","gross_purchase_amount":0,"supplier":"","purchase_order":"","expected_end_of_life":"","warranty_expiry":"","notes":"Casio Hr100Rc","components":[],"activity_log":[]},{"id":"imported_110","asset_code":"AST-00110","serial_no":"","asset_name":"Printer - Epson 1100","asset_category":"Printer / Scanner","department":"Online Shopping","location":"Apo - Online Shopping","custodian":"Mmr Lazada","status":"Scrapped","purchase_date":"2025-09-10","gross_purchase_amount":0,"supplier":"Shopee","purchase_order":"","expected_end_of_life":"","warranty_expiry":"","notes":"Epson 1100","components":[],"activity_log":[]},{"id":"imported_111","asset_code":"AST-00111","serial_no":"","asset_name":"Printer - Epson L3250","asset_category":"Printer / Scanner","department":"Customer Order / Invoicing","location":"Apo - Bullpen","custodian":"Minda / Inday","status":"Active","purchase_date":"2025-09-12","gross_purchase_amount":0,"supplier":"Shopee","purchase_order":"","expected_end_of_life":"","warranty_expiry":"","notes":"Epson L3250","components":[],"activity_log":[]},{"id":"imported_112","asset_code":"AST-00112","serial_no":"","asset_name":"Huawei MateBook D 15","asset_category":"Laptop","department":"HW","location":"Apo - Bullpen","custodian":"Fei","status":"Active","purchase_date":"2025-10-08","gross_purchase_amount":0,"supplier":"Zenshin","purchase_order":"","expected_end_of_life":"","warranty_expiry":"","notes":"","components":[],"activity_log":[]},{"id":"imported_113","asset_code":"AST-00113","serial_no":"","asset_name":"Printer - Gprinter Gp-1324D","asset_category":"Printer / Scanner","department":"Online Shopping","location":"Apo - Online Shopping","custodian":"Luisa","status":"Active","purchase_date":"2025-10-27","gross_purchase_amount":0,"supplier":"","purchase_order":"","expected_end_of_life":"","warranty_expiry":"","notes":"Gprinter Gp-1324D","components":[],"activity_log":[]},{"id":"imported_114","asset_code":"AST-00114","serial_no":"","asset_name":"Ofix Chair","asset_category":"Office Furniture","department":"HR","location":"Pineda Office","custodian":"Crizel","status":"Active","purchase_date":"2025-10-27","gross_purchase_amount":0,"supplier":"","purchase_order":"","expected_end_of_life":"","warranty_expiry":"","notes":"Ofix Chair","components":[],"activity_log":[]},{"id":"imported_115","asset_code":"AST-00115","serial_no":"","asset_name":"Mouse - A4Tech","asset_category":"IT Peripherals & Accessories","department":"IT","location":"Pineda Office","custodian":"Ella","status":"Active","purchase_date":"2025-10-27","gross_purchase_amount":0,"supplier":"","purchase_order":"","expected_end_of_life":"","warranty_expiry":"","notes":"A4Tech","components":[],"activity_log":[]},{"id":"imported_116","asset_code":"AST-00116","serial_no":"","asset_name":"Keyboard - Hp Km100 Keyboard","asset_category":"IT Peripherals & Accessories","department":"","location":"","custodian":"Roselle Vallente","status":"Active","purchase_date":"2025-12-12","gross_purchase_amount":0,"supplier":"Easy Pc","purchase_order":"","expected_end_of_life":"","warranty_expiry":"","notes":"Hp Km100 Keyboard","components":[],"activity_log":[]},{"id":"imported_117","asset_code":"AST-00117","serial_no":"","asset_name":"Keyboard - Zeus Wired Standard Keyboard K-500","asset_category":"IT Peripherals & Accessories","department":"HR","location":"Pineda Office","custodian":"Ally Bueno","status":"Active","purchase_date":"2025-12-17","gross_purchase_amount":0,"supplier":"Shopee","purchase_order":"","expected_end_of_life":"","warranty_expiry":"","notes":"Zeus Wired Standard Keyboard K-500","components":[],"activity_log":[]},{"id":"imported_118","asset_code":"AST-00118","serial_no":"","asset_name":"Wifi Stick","asset_category":"Network Equipment","department":"Marketing","location":"Apo - Bullpen","custodian":"Niery","status":"Active","purchase_date":"2026-01-05","gross_purchase_amount":0,"supplier":"Easy Pc","purchase_order":"","expected_end_of_life":"","warranty_expiry":"","notes":"600 Mbps Wifi Dongle","components":[],"activity_log":[]},{"id":"imported_119","asset_code":"AST-00119","serial_no":"","asset_name":"Speakers - Astron","asset_category":"AV Equipment","department":"","location":"","custodian":"Mmi","status":"Active","purchase_date":"2026-01-06","gross_purchase_amount":0,"supplier":"","purchase_order":"","expected_end_of_life":"","warranty_expiry":"","notes":"Astron","components":[],"activity_log":[]},{"id":"imported_120","asset_code":"AST-00120","serial_no":"","asset_name":"Wifi Stick","asset_category":"Network Equipment","department":"Marketing","location":"Apo - Bullpen","custodian":"Pam","status":"Active","purchase_date":"2026-01-15","gross_purchase_amount":0,"supplier":"Easy Pc","purchase_order":"","expected_end_of_life":"","warranty_expiry":"","notes":"600 Mbps Wifi Dongle","components":[],"activity_log":[]},{"id":"imported_121","asset_code":"AST-00121","serial_no":"","asset_name":"Nvision N190HD V8 19 inch","asset_category":"Monitor","department":"Accounting","location":"Pineda Office","custodian":"April","status":"Active","purchase_date":"2026-01-21","gross_purchase_amount":0,"supplier":"Easy Pc","purchase_order":"","expected_end_of_life":"","warranty_expiry":"","notes":"Nvision N190Hd V8","components":[],"activity_log":[]},{"id":"imported_122","asset_code":"AST-00122","serial_no":"","asset_name":"Nvision N190HD V8 19 inch","asset_category":"Monitor","department":"HR","location":"Pineda Office","custodian":"Ally","status":"Active","purchase_date":"2026-01-21","gross_purchase_amount":0,"supplier":"Easy Pc","purchase_order":"","expected_end_of_life":"","warranty_expiry":"","notes":"Nvision N190Hd V8","components":[],"activity_log":[]},{"id":"imported_123","asset_code":"AST-00123","serial_no":"","asset_name":"Nvision N190HD V8 19 inch","asset_category":"Monitor","department":"Posh","location":"","custodian":"Posh Pos2","status":"Active","purchase_date":"2026-01-26","gross_purchase_amount":0,"supplier":"Easy Pc","purchase_order":"","expected_end_of_life":"","warranty_expiry":"","notes":"Nvision N190Hd V8","components":[],"activity_log":[]},{"id":"imported_124","asset_code":"AST-00124","serial_no":"","asset_name":"Strapping Machine - Xt-8022 High Table Open Frame","asset_category":"Packaging Equipment","department":"Warehouse","location":"Apo - Warehouse Checking Area (2nd Floor)","custodian":"Benjie","status":"Active","purchase_date":"","gross_purchase_amount":0,"supplier":"","purchase_order":"","expected_end_of_life":"","warranty_expiry":"","notes":"Xt-8022 High Table Open Frame","components":[],"activity_log":[]},{"id":"imported_125","asset_code":"AST-00125","serial_no":"","asset_name":"Strapping Machine - Xt-8022 High Table Open Frame","asset_category":"Packaging Equipment","department":"Warehouse","location":"Apo - Warehouse Checking Area (2nd Floor)","custodian":"Benjie","status":"Active","purchase_date":"","gross_purchase_amount":0,"supplier":"","purchase_order":"","expected_end_of_life":"","warranty_expiry":"","notes":"Xt-8022 High Table Open Frame","components":[],"activity_log":[]},{"id":"imported_126","asset_code":"AST-00126","serial_no":"","asset_name":"Telephone - Panasonic Kxts500Mx","asset_category":"Telephone / PABX","department":"Enfant Shop","location":"EF28 UPTOWN Mall","custodian":"Ef28 Uptown Mall","status":"Active","purchase_date":"","gross_purchase_amount":0,"supplier":"","purchase_order":"","expected_end_of_life":"","warranty_expiry":"","notes":"Panasonic Kxts500Mx","components":[],"activity_log":[]}];
+
+async function init() {
+  showLoading(true);
+  try {
+    const data = await sbFetch('assets?order=asset_code.asc&limit=1000');
+    assets = data || [];
+    applyFilters();
+    updateStats();
+    populateFilterDropdowns();
+  } catch(e) {
+    toast('Failed to load assets from database. ' + e.message, 'error');
+  } finally {
+    showLoading(false);
+  }
+}
+
+function showLoading(on) {
+  let el = document.getElementById('loadingBar');
+  if (!el) {
+    el = document.createElement('div');
+    el.id = 'loadingBar';
+    el.style.cssText = 'position:fixed;top:52px;left:0;right:0;height:3px;background:var(--accent-mid);z-index:999;transition:opacity 0.3s;';
+    document.body.appendChild(el);
+  }
+  el.style.opacity = on ? '1' : '0';
+}
+
+async function save() {
+  // no-op: individual operations call sbSave/sbDelete directly
+}
+
+async function sbUpsert(asset) {
+  await sbFetch('assets?on_conflict=id', { method: 'POST', body: JSON.stringify([asset]), headers: { ...SB_HEADERS, 'Prefer': 'resolution=merge-duplicates,return=minimal' } });
+}
+
+async function sbDelete(id) {
+  await sbFetch(`assets?id=eq.${id}`, { method: 'DELETE' });
+}
+
+// ─── Filters & Sort ───────────────────────────────────────────────────────────
+function applyFilters() {
+  const q = document.getElementById('searchInput').value.toLowerCase();
+  const fLoc = '';
+
+  filtered = assets.filter(a => {
+    const matchQ = !q || [a.asset_code, a.asset_name, a.serial_no, a.custodian].some(v => v && v.toLowerCase().includes(q));
+    const matchStatus = selectedStatuses.size === 0 || selectedStatuses.has(a.status);
+    const matchCat = selectedCategories.size === 0 || selectedCategories.has(a.asset_category);
+    const matchLoc = selectedLocations.size === 0 || selectedLocations.has(a.location);
+    const matchDept = selectedDepartments.size === 0 || selectedDepartments.has(a.department);
+    return matchQ && matchStatus && matchCat && matchLoc && matchDept;
+  });
+
+  filtered.sort((a, b) => {
+    const av = (a[sortCol] || '').toString();
+    const bv = (b[sortCol] || '').toString();
+    return av.localeCompare(bv, undefined, { numeric: true }) * sortDir;
+  });
+
+  currentPage = 1;
+  renderTable();
+  updateStats();
+  document.getElementById('resultCount').textContent = `${filtered.length} of ${assets.length} assets`;
+}
+
+function sortBy(col) {
+  if (sortCol === col) sortDir *= -1;
+  else { sortCol = col; sortDir = 1; }
+  document.querySelectorAll('th').forEach(th => {
+    th.classList.toggle('sorted', th.dataset.col === col);
+    if (th.dataset.col === col) {
+      th.querySelector('.sort-icon').textContent = sortDir === 1 ? '↑' : '↓';
+    } else if (th.querySelector('.sort-icon')) {
+      th.querySelector('.sort-icon').textContent = '↕';
+    }
+  });
+  applyFilters();
+}
+
+// ─── Render ───────────────────────────────────────────────────────────────────
+function renderTable() {
+  const tbody = document.getElementById('tableBody');
+  const start = (currentPage - 1) * PAGE_SIZE;
+  const page = filtered.slice(start, start + PAGE_SIZE);
+
+  if (!filtered.length) {
+    tbody.innerHTML = `<tr><td colspan="9"><div class="empty-state"><p>No assets found</p><small>Try adjusting your search or filters</small></div></td></tr>`;
+    document.getElementById('pagination').innerHTML = '';
+    return;
+  }
+
+  tbody.innerHTML = page.map(a => `
+    <tr data-id="${a.id}" class="${selectedIds.has(a.id) ? 'selected' : ''}">
+      <td class="cb-cell"><input type="checkbox" ${selectedIds.has(a.id) ? 'checked' : ''} onchange="toggleRow('${a.id}', this.checked)"></td>
+      <td><span class="asset-id">${a.asset_code}</span></td>
+      <td>
+        <div class="asset-name">${a.asset_name}</div>
+        ${a.serial_no ? `<div class="asset-serial">S/N: ${a.serial_no}</div>` : ''}
+      </td>
+      <td><span class="cat-tag">${a.asset_category || '—'}</span></td>
+      <td style="font-size:13px;color:var(--text2)">${a.location || '—'}</td>
+      <td>${statusBadge(a.status)}</td>
+      <td style="font-size:13px;font-family:var(--mono)">${a.purchase_date || '—'}</td>
+      <td style="font-size:13px">${a.custodian || '<span style="color:var(--text3)">Unassigned</span>'}</td>
+      <td class="col-act">
+        <div class="row-actions">
+          <div class="print-dropdown">
+            <button class="btn btn-outline btn-sm btn-icon" title="Print Tag" onclick="togglePrintMenu(event,'menu_${a.id}')">⊞</button>
+            <div class="print-dropdown-menu" id="menu_${a.id}">
+              <span class="print-dropdown-item" onclick="printTag('${a.id}','standard');closePrintMenus()">Standard (50×30mm)</span>
+              <span class="print-dropdown-item" onclick="printTag('${a.id}','mini');closePrintMenus()">Mini (30×15mm)</span>
+            </div>
+          </div>
+          ${(currentUser && currentUser.role !== 'viewer') ? `<button class="btn btn-outline btn-sm btn-icon" title="Edit" onclick="openEdit('${a.id}')">✎</button>` : ''}
+          ${(currentUser && currentUser.role === 'admin') ? `<button class="btn btn-danger btn-sm btn-icon" title="Delete" onclick="openDelete('${a.id}')">✕</button>` : ''}
+        </div>
+      </td>
+    </tr>
+  `).join('');
+
+  renderPagination();
+  updateSelectAllState();
+  updateBulkBar();
+}
+
+function statusBadge(status) {
+  const map = {
+    'Active': 'badge-active dot-active',
+    'In Stock (Undeployed)': 'badge-instock dot-instock',
+    'Under Maintenance': 'badge-maintenance dot-maintenance',
+    'Retired': 'badge-retired dot-retired',
+    'Scrapped': 'badge-scrapped dot-scrapped',
+  };
+  const cls = map[status] || 'badge-retired dot-retired';
+  const [bc, dc] = cls.split(' ');
+  return `<span class="badge ${bc}"><span class="dot ${dc}"></span>${status}</span>`;
+}
+
+function renderPagination() {
+  const total = filtered.length;
+  const pages = Math.ceil(total / PAGE_SIZE);
+  if (pages <= 1) { document.getElementById('pagination').innerHTML = ''; return; }
+
+  const start = (currentPage - 1) * PAGE_SIZE + 1;
+  const end = Math.min(currentPage * PAGE_SIZE, total);
+  let btns = '';
+  for (let i = 1; i <= pages; i++) {
+    btns += `<button class="page-btn ${i === currentPage ? 'active' : ''}" onclick="goPage(${i})">${i}</button>`;
+  }
+  document.getElementById('pagination').innerHTML = `
+    <span>Showing ${start}–${end} of ${total}</span>
+    <div class="page-btns">
+      <button class="page-btn" onclick="goPage(${currentPage - 1})" ${currentPage === 1 ? 'disabled' : ''}>‹</button>
+      ${btns}
+      <button class="page-btn" onclick="goPage(${currentPage + 1})" ${currentPage === pages ? 'disabled' : ''}>›</button>
+    </div>
+  `;
+}
+
+function goPage(p) {
+  const pages = Math.ceil(filtered.length / PAGE_SIZE);
+  currentPage = Math.max(1, Math.min(p, pages));
+  renderTable();
+}
+
+function updateStats() {
+  const total = assets.length;
+  const active = assets.filter(a => a.status === 'Active').length;
+  const instock = assets.filter(a => a.status === 'In Stock (Undeployed)').length;
+  const maintenance = assets.filter(a => a.status === 'Under Maintenance').length;
+  const totalVal = assets.reduce((s, a) => s + (Number(a.gross_purchase_amount) || 0), 0);
+  document.getElementById('statsBar').innerHTML = `
+    <div class="stat-card"><div class="stat-label">Total Assets</div><div class="stat-value">${total}</div></div>
+    <div class="stat-card"><div class="stat-label">Active</div><div class="stat-value green">${active}</div></div>
+    <div class="stat-card"><div class="stat-label">In Stock (Undeployed)</div><div class="stat-value" style="color:var(--info)">${instock}</div></div>
+    <div class="stat-card"><div class="stat-label">Under Maintenance</div><div class="stat-value amber">${maintenance}</div></div>
+    <div class="stat-card"><div class="stat-label">Retired / Scrapped</div><div class="stat-value red">${assets.filter(a=>a.status==='Retired'||a.status==='Scrapped').length}</div></div>
+  `;
+}
+
+function populateFilterDropdowns() {
+  buildCatPanel();
+  buildLocPanel();
+  buildDeptPanel();
+  buildStatusPanel();
+  const catDl = document.getElementById('categoryList');
+  const locDl = document.getElementById('locationList');
+  if (catDl) catDl.innerHTML = '';
+  if (locDl) locDl.innerHTML = '';
+}
+
+// ─── Add / Edit ───────────────────────────────────────────────────────────────
+function openAdd() {
+  editingId = null;
+  document.getElementById('modalTitle').textContent = 'Add Asset';
+  document.getElementById('modalSubtitle').textContent = 'ERPNext-compatible fields';
+  clearForm();
+  // Auto-generate asset code
+  const maxCode = assets.reduce((max, a) => {
+    const n = parseInt((a.asset_code || '').replace(/\D/g, '')) || 0;
+    return Math.max(max, n);
+  }, 0);
+  document.getElementById('f_asset_code').value = 'AST-' + String(maxCode + 1).padStart(5, '0');
+  document.getElementById('assetModal').classList.add('open');
+  populateAssetNameSuggestions();
+  setTimeout(() => document.getElementById('f_asset_name').focus(), 100);
+}
+
+function openEdit(id) {
+  const asset = assets.find(a => a.id === id);
+  if (!asset) return;
+  editingId = id;
+  document.getElementById('modalTitle').textContent = 'Edit Asset';
+  document.getElementById('modalSubtitle').textContent = asset.asset_code;
+  const fields = ['asset_code','asset_name','serial_no','asset_category','custodian','department','location','status','purchase_date','gross_purchase_amount','supplier','purchase_order','expected_end_of_life','warranty_expiry'];
+  fields.forEach(f => {
+    const el = document.getElementById('f_' + f);
+    if (el) el.value = asset[f] !== undefined ? asset[f] : '';
+  });
+  switchTab('details');
+  renderComponents(asset.components || []);
+  renderLog(asset.activity_log || []);
+  setLogDate();
+  populateAssetNameSuggestions();
+  document.getElementById('assetModal').classList.add('open');
+}
+
+function clearForm() {
+  ['asset_code','asset_name','serial_no','asset_category','custodian','department','location','status','purchase_date','gross_purchase_amount','supplier','purchase_order','expected_end_of_life','warranty_expiry'].forEach(f => {
+    const el = document.getElementById('f_' + f);
+    if (el) el.value = f === 'status' ? 'Active' : '';
+  });
+  renderComponents([]);
+  renderLog([]);
+  setLogDate();
+  switchTab('details');
+}
+
+function closeModal() {
+  document.getElementById('assetModal').classList.remove('open');
+}
+
+async function saveAsset() {
+  const code = document.getElementById('f_asset_code').value.trim();
+  const name = document.getElementById('f_asset_name').value.trim();
+  const cat = document.getElementById('f_asset_category').value.trim();
+  if (!code || !name || !cat) { toast('Asset Code, Name, and Category are required.', 'error'); return; }
+  if (!document.getElementById('f_purchase_date').value) { toast('Purchase Date is required.', 'error'); return; }
+  if (!editingId && assets.find(a => a.asset_code === code)) { toast('Asset code already exists.', 'error'); return; }
+
+  const existing = editingId ? assets.find(a => a.id === editingId) : null;
+  const activityLog = existing ? [...(existing.activity_log || [])] : [];
+  const today = new Date().toISOString().split('T')[0];
+
+  const newCustodian = document.getElementById('f_custodian').value.trim();
+  const newLocation = document.getElementById('f_location').value.trim();
+  const newStatus = document.getElementById('f_status').value;
+
+  const userName = currentUser ? currentUser.name : 'System';
+  const now = new Date();
+  const timestamp = now.toISOString().replace('T', ' ').substring(0, 16);
+
+  if (existing) {
+    const fieldChanges = [];
+    const newDept     = document.getElementById('f_department').value.trim();
+    const newDate     = document.getElementById('f_purchase_date').value;
+    const newSerial   = document.getElementById('f_serial_no').value.trim();
+    const newSupplier = document.getElementById('f_supplier').value.trim();
+    const newPO       = document.getElementById('f_purchase_order').value.trim();
+    const newAmount   = String(parseFloat(document.getElementById('f_gross_purchase_amount').value) || 0);
+    const newNotes    = document.getElementById('f_notes') ? document.getElementById('f_notes').value.trim() : '';
+
+    if (existing.asset_name     !== name)         fieldChanges.push(`Name: "${existing.asset_name}" → "${name}"`);
+    if (existing.asset_category !== cat)          fieldChanges.push(`Category: "${existing.asset_category}" → "${cat}"`);
+    if (existing.serial_no      !== newSerial)    fieldChanges.push(`Serial No: "${existing.serial_no || '—'}" → "${newSerial || '—'}"`);
+    if (existing.department     !== newDept)      fieldChanges.push(`Department: "${existing.department || '—'}" → "${newDept || '—'}"`);
+    if (existing.location       !== newLocation)  fieldChanges.push(`Location: "${existing.location || '—'}" → "${newLocation || '—'}"`);
+    if (existing.custodian      !== newCustodian) fieldChanges.push(`Custodian: "${existing.custodian || '—'}" → "${newCustodian || '—'}"`);
+    if (existing.status         !== newStatus)    fieldChanges.push(`Status: "${existing.status}" → "${newStatus}"`);
+    if (existing.purchase_date  !== newDate)      fieldChanges.push(`Purchase Date: "${existing.purchase_date || '—'}" → "${newDate || '—'}"`);
+    if (String(existing.gross_purchase_amount||0) !== newAmount) fieldChanges.push(`Amount: ₱${existing.gross_purchase_amount||0} → ₱${newAmount}`);
+    if (existing.supplier       !== newSupplier)  fieldChanges.push(`Supplier: "${existing.supplier || '—'}" → "${newSupplier || '—'}"`);
+    if (existing.purchase_order !== newPO)        fieldChanges.push(`PO: "${existing.purchase_order || '—'}" → "${newPO || '—'}"`);
+
+    const note = fieldChanges.length
+      ? `Edited by ${userName} on ${timestamp}\n${fieldChanges.join('\n')}`
+      : `Edited by ${userName} on ${timestamp} (no field changes)`;
+
+    activityLog.push({ date: today, type: 'Edit', by: userName, note, auto: true, id: Date.now() });
+  } else {
+    activityLog.push({ date: today, type: 'Created', by: userName, note: `Added by ${userName} on ${timestamp}`, auto: true, id: Date.now() });
+  }
+
+  const data = {
+    id: editingId || ('a' + Date.now()),
+    asset_code: code, asset_name: name,
+    serial_no: document.getElementById('f_serial_no').value.trim(),
+    asset_category: cat,
+    custodian: newCustodian,
+    department: document.getElementById('f_department').value.trim(),
+    location: newLocation, status: newStatus,
+    purchase_date: document.getElementById('f_purchase_date').value,
+    gross_purchase_amount: parseFloat(document.getElementById('f_gross_purchase_amount').value) || 0,
+    supplier: document.getElementById('f_supplier').value.trim(),
+    purchase_order: document.getElementById('f_purchase_order').value.trim(),
+    expected_end_of_life: document.getElementById('f_expected_end_of_life').value,
+    warranty_expiry: document.getElementById('f_warranty_expiry').value,
+    components: readComponents(),
+    activity_log: activityLog,
+  };
+
+  try {
+    await sbUpsert(data);
+    if (editingId) { const idx = assets.findIndex(a => a.id === editingId); assets[idx] = data; toast('Asset updated.', 'success'); }
+    else { assets.push(data); toast('Asset added.', 'success'); }
+    closeModal();
+    populateFilterDropdowns();
+    applyFilters();
+    updateStats();
+  } catch(e) {
+    toast('Save failed: ' + e.message, 'error');
+  }
+}
+
+// ─── Delete ───────────────────────────────────────────────────────────────────
+function openDelete(id) {
+  pendingDeleteId = id;
+  const asset = assets.find(a => a.id === id);
+  document.getElementById('deleteAssetName').textContent = asset ? `${asset.asset_name} (${asset.asset_code})` : '';
+  document.getElementById('deleteModal').classList.add('open');
+}
+function closeDelete() { document.getElementById('deleteModal').classList.remove('open'); pendingDeleteId = null; }
+async function confirmDelete() {
+  if (!pendingDeleteId) return;
+  try {
+    await sbDelete(pendingDeleteId);
+    assets = assets.filter(a => a.id !== pendingDeleteId);
+    closeDelete();
+    applyFilters();
+    updateStats();
+    toast('Asset deleted.', 'success');
+  } catch(e) {
+    toast('Delete failed: ' + e.message, 'error');
+  }
+}
+
+// ─── Export ───────────────────────────────────────────────────────────────────
+function openExport() {
+  document.getElementById('exportCount').textContent = `${assets.length} assets`;
+  document.getElementById('exportModal').classList.add('open');
+}
+function closeExport() { document.getElementById('exportModal').classList.remove('open'); }
+
+function exportCSV() {
+  // ERPNext Asset doctype column names
+  const headers = ['name','asset_name','serial_no','asset_category','custodian','department','location','status','purchase_date','gross_purchase_amount','supplier','purchase_order','expected_end_of_life','warranty_expiry','notes'];
+  const labels = ['name','asset_name','serial_no','asset_category','custodian','department','location','status','purchase_date','gross_purchase_amount','supplier','purchase_order','expected_end_of_life','warranty_expiry','notes'];
+  const rows = assets.map(a => headers.map(h => {
+    const val = h === 'name' ? a.asset_code : (a[h] !== undefined ? a[h] : '');
+    const s = String(val ?? '');
+    return s.includes(',') || s.includes('"') || s.includes('\n') ? `"${s.replace(/"/g,'""')}"` : s;
+  }).join(','));
+  const csv = [labels.join(','), ...rows].join('\n');
+  download('asset_inventory.csv', csv, 'text/csv');
+  closeExport();
+  toast('CSV exported — import via ERPNext → Data Import.', 'success');
+}
+
+function exportJSON() {
+  download('asset_inventory.json', JSON.stringify(assets, null, 2), 'application/json');
+  closeExport();
+  toast('JSON exported.', 'success');
+}
+
+function download(filename, content, type) {
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([content], { type }));
+  a.download = filename;
+  a.click();
+}
+
+// ─── Toast ────────────────────────────────────────────────────────────────────
+function toast(msg, type = '') {
+  const el = document.createElement('div');
+  el.className = `toast ${type}`;
+  el.textContent = msg;
+  document.getElementById('toastContainer').appendChild(el);
+  setTimeout(() => el.remove(), 3200);
+}
+
+// Close overlays on backdrop click
+document.querySelectorAll('.overlay').forEach(o => {
+  o.addEventListener('click', e => { if (e.target === o) o.classList.remove('open'); });
+});
+
+// init() is called after login
+
+function populateAssetNameSuggestions() {
+  const dl = document.getElementById('assetNameList');
+  if (!dl) return;
+  const names = [...new Set(assets.map(a => a.asset_name).filter(Boolean))].sort();
+  dl.innerHTML = names.map(n => `<option value="${n}">`).join('');
+}
+function switchTab(name) {
+  document.querySelectorAll('.modal-tab').forEach((t, i) => {
+    const names = ['details','components','log'];
+    t.classList.toggle('active', names[i] === name);
+  });
+  document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+  document.getElementById('tab-' + name).classList.add('active');
+}
+
+// ─── Components ───────────────────────────────────────────────────────────────
+const PART_TYPES = ['Processor','Motherboard','RAM','SSD','HDD','GPU','Power Supply','Wifi-Stick','Other'];
+
+function renderComponents(components) {
+  tempComponents = components.map(c => ({...c}));
+  const tbody = document.getElementById('componentsBody');
+  const empty = document.getElementById('componentsEmpty');
+  const totalEl = document.getElementById('componentsTotal');
+  if (!tempComponents.length) {
+    tbody.innerHTML = '';
+    empty.style.display = 'block';
+    totalEl.style.display = 'none';
+    return;
+  }
+  empty.style.display = 'none';
+  tbody.innerHTML = tempComponents.map((c, i) => `
+    <tr class="comp-row">
+      <td><select onchange="updateComponent(${i},'part_type',this.value)">${PART_TYPES.map(t=>`<option ${c.part_type===t?'selected':''}>${t}</option>`).join('')}</select></td>
+      <td><input type="text" value="${c.brand_model||''}" placeholder="e.g. Intel Core i7-12700" onchange="updateComponent(${i},'brand_model',this.value)"></td>
+      <td><input type="text" value="${c.serial_no||''}" placeholder="Serial number" onchange="updateComponent(${i},'serial_no',this.value)"></td>
+      <td><input type="text" value="${c.specs||''}" placeholder="e.g. 512GB" onchange="updateComponent(${i},'specs',this.value)"></td>
+      <td><input type="number" value="${c.amount||''}" placeholder="0.00" min="0" step="0.01" style="text-align:right;" onchange="updateComponent(${i},'amount',parseFloat(this.value)||0);updateComponentTotal()"></td>
+      <td style="text-align:center;"><button class="log-delete-btn" onclick="removeComponent(${i})">✕</button></td>
+    </tr>`).join('');
+  updateComponentTotal();
+}
+
+function updateComponentTotal() {
+  const total = tempComponents.reduce((sum, c) => sum + (parseFloat(c.amount) || 0), 0);
+  const totalEl = document.getElementById('componentsTotal');
+  totalEl.style.display = 'block';
+  totalEl.textContent = 'Components total: ₱' + total.toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
+
+let tempComponents = [];
+function addComponentRow() {
+  tempComponents.push({ part_type: 'Processor', brand_model: '', serial_no: '', specs: '', amount: 0 });
+  renderComponents(tempComponents);
+}
+function updateComponent(i, field, val) { tempComponents[i][field] = val; }
+function removeComponent(i) { tempComponents.splice(i, 1); renderComponents(tempComponents); }
+function readComponents() { return tempComponents.filter(c => c.brand_model || c.serial_no || c.specs); }
+
+// ─── Activity Log ─────────────────────────────────────────────────────────────
+function setLogDate() {
+  const el = document.getElementById('log_date');
+  if (el) el.value = new Date().toISOString().split('T')[0];
+}
+
+const LOG_COLORS = { Maintenance:'log-maintenance', Repair:'log-repair', Upgrade:'log-upgrade', Transfer:'log-transfer', Inspection:'log-inspection', Note:'log-note' };
+
+function renderLog(entries) {
+  const container = document.getElementById('logEntries');
+  const empty = document.getElementById('logEmpty');
+  if (!entries || !entries.length) { container.innerHTML = ''; empty.style.display = 'block'; return; }
+  empty.style.display = 'none';
+  container.innerHTML = [...entries].reverse().map((e, ri) => {
+    const i = entries.length - 1 - ri;
+    const cls = LOG_COLORS[e.type] || 'log-note';
+    const autoTag = e.auto ? `<span class="log-auto-tag">auto</span>` : '';
+    const delBtn = e.auto ? '' : `<button class="log-delete-btn" onclick="deleteLogEntry(${i})">✕</button>`;
+    return `<div class="log-entry">
+      <div class="log-entry-header">
+        <span class="log-type-badge ${cls}">${e.type}</span>
+        ${autoTag}
+        <span class="log-meta">${e.date}${e.by && !e.auto ? ' · ' + e.by : ''}</span>
+        ${delBtn}
+      </div>
+      <div class="log-entry-body">${e.note}</div>
+    </div>`;
+  }).join('');
+}
+
+async function addLogEntry() {
+  if (!editingId) { toast('Save the asset first before adding log entries.', 'error'); return; }
+  const date = document.getElementById('log_date').value;
+  const type = document.getElementById('log_type').value;
+  const by = document.getElementById('log_by').value.trim();
+  const note = document.getElementById('log_note').value.trim();
+  if (!note) { toast('Please enter details for this log entry.', 'error'); return; }
+  const asset = assets.find(a => a.id === editingId);
+  if (!asset) return;
+  if (!asset.activity_log) asset.activity_log = [];
+  asset.activity_log.push({ date, type, by, note, id: Date.now() });
+  try {
+    await sbUpsert(asset);
+    renderLog(asset.activity_log);
+    document.getElementById('log_note').value = '';
+    setLogDate();
+    toast('Log entry added.', 'success');
+  } catch(e) {
+    asset.activity_log.pop();
+    toast('Failed to save log: ' + e.message, 'error');
+  }
+}
+
+async function deleteLogEntry(i) {
+  if (!editingId) return;
+  const asset = assets.find(a => a.id === editingId);
+  if (!asset || !asset.activity_log) return;
+  if (!confirm('Delete this log entry?')) return;
+  const removed = asset.activity_log.splice(i, 1);
+  try {
+    await sbUpsert(asset);
+    renderLog(asset.activity_log);
+  } catch(e) {
+    asset.activity_log.splice(i, 0, ...removed);
+    toast('Failed to delete log: ' + e.message, 'error');
+  }
+}
+
+// ─── Selection ────────────────────────────────────────────────────────────────
+function toggleRow(id, checked) {
+  if (checked) selectedIds.add(id); else selectedIds.delete(id);
+  const row = document.querySelector(`tr[data-id="${id}"]`);
+  if (row) row.classList.toggle('selected', checked);
+  updateBulkBar();
+  updateSelectAllState();
+}
+
+function toggleSelectAll(checked) {
+  const pageIds = filtered.slice((currentPage-1)*PAGE_SIZE, currentPage*PAGE_SIZE).map(a => a.id);
+  pageIds.forEach(id => { if (checked) selectedIds.add(id); else selectedIds.delete(id); });
+  renderTable();
+  updateBulkBar();
+}
+
+function clearSelection() {
+  selectedIds.clear();
+  renderTable();
+  updateBulkBar();
+}
+
+function updateBulkBar() {
+  const bar = document.getElementById('bulkBar');
+  const count = selectedIds.size;
+  bar.classList.toggle('visible', count > 0);
+  document.getElementById('bulkCount').textContent = count;
+}
+
+function updateSelectAllState() {
+  const pageIds = filtered.slice((currentPage-1)*PAGE_SIZE, currentPage*PAGE_SIZE).map(a => a.id);
+  const allChecked = pageIds.length > 0 && pageIds.every(id => selectedIds.has(id));
+  const cb = document.getElementById('selectAll');
+  if (cb) { cb.checked = allChecked; cb.indeterminate = !allChecked && pageIds.some(id => selectedIds.has(id)); }
+}
+
+function togglePrintMenu(e, id) {
+  e.stopPropagation();
+  const menu = document.getElementById(id);
+  const wasOpen = menu.classList.contains('open');
+  closePrintMenus();
+  if (!wasOpen) {
+    const btn = e.currentTarget;
+    const rect = btn.getBoundingClientRect();
+    menu.style.top = (rect.bottom + 4) + 'px';
+    menu.style.left = rect.left + 'px';
+    menu.classList.add('open');
+  }
+}
+function closePrintMenus() {
+  document.querySelectorAll('.print-dropdown-menu').forEach(m => m.classList.remove('open'));
+}
+document.addEventListener('click', closePrintMenus);
+
+// ─── Print Tag (Niimbot PDF) ──────────────────────────────────────────────────
+// ─── Import ───────────────────────────────────────────────────────────────────
+let importParsedAssets = [];
+
+function openImport() {
+  importParsedAssets = [];
+  document.getElementById('importPreview').style.display = 'none';
+  document.getElementById('importConfirmBtn').style.display = 'none';
+  document.getElementById('importFileInput').value = '';
+  document.getElementById('importModal').classList.add('open');
+}
+function closeImport() { document.getElementById('importModal').classList.remove('open'); }
+
+function handleImportDrop(e) {
+  const file = e.dataTransfer.files[0];
+  if (file) handleImportFile(file);
+}
+
+function handleImportFile(file) {
+  if (!file) return;
+  const ext = file.name.split('.').pop().toLowerCase();
+  if (ext === 'csv') {
+    const reader = new FileReader();
+    reader.onload = e => parseImportCSV(e.target.result);
+    reader.readAsText(file);
+  } else if (ext === 'xlsx' || ext === 'xls') {
+    loadScript('https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js').then(() => {
+      const reader = new FileReader();
+      reader.onload = e => {
+        const wb = XLSX.read(e.target.result, { type: 'array', cellDates: true });
+        const ws = wb.Sheets[wb.SheetNames[0]];
+        const rows = XLSX.utils.sheet_to_json(ws, { header: 1, raw: false, dateNF: 'yyyy-mm-dd' });
+        parseImportRows(rows);
+      };
+      reader.readAsArrayBuffer(file);
+    });
+  } else {
+    toast('Please upload a .csv or .xlsx file.', 'error');
+  }
+}
+
+function parseImportCSV(text) {
+  const rows = text.split(/\r?\n/).filter(r => r.trim()).map(r => {
+    const result = [];
+    let cur = '', inQ = false;
+    for (let i = 0; i < r.length; i++) {
+      if (r[i] === '"') { inQ = !inQ; }
+      else if (r[i] === ',' && !inQ) { result.push(cur.trim()); cur = ''; }
+      else cur += r[i];
+    }
+    result.push(cur.trim());
+    return result;
+  });
+  parseImportRows(rows);
+}
+
+function parseImportRows(rows) {
+  if (rows.length < 2) { toast('File appears empty.', 'error'); return; }
+  const headers = rows[0].map(h => String(h).trim().toLowerCase().replace(/\s+/g, '_'));
+  const col = k => headers.indexOf(k);
+  const existingCodes = new Set(assets.map(a => a.asset_code));
+  const assetMap = {};
+  let skipped = 0;
+
+  for (let i = 1; i < rows.length; i++) {
+    const r = rows[i];
+    const get = k => { const idx = col(k); return idx >= 0 ? String(r[idx] || '').trim() : ''; };
+    const code = get('asset_code');
+    if (!code) continue;
+    if (existingCodes.has(code)) { skipped++; continue; }
+
+    const compPart = get('comp_part_type');
+    const comp = compPart ? {
+      part_type: compPart, brand_model: get('comp_brand_model'),
+      serial_no: get('comp_serial_no'), specs: get('comp_specs'),
+      amount: parseFloat(get('comp_amount')) || 0,
+    } : null;
+
+    if (assetMap[code]) {
+      if (comp) assetMap[code].components.push(comp);
+    } else {
+      const statusRaw = get('status');
+      const validStatuses = ['Active','In Stock (Undeployed)','Under Maintenance','Retired','Scrapped'];
+      const status = validStatuses.find(s => s.toLowerCase() === statusRaw.toLowerCase()) || 'Active';
+      assetMap[code] = {
+        id: 'import_' + Date.now() + '_' + i,
+        asset_code: code, asset_name: get('asset_name'), asset_category: get('asset_category'),
+        serial_no: get('serial_no'), department: get('department'), location: get('location'),
+        custodian: get('custodian'), status,
+        purchase_date: get('purchase_date'),
+        gross_purchase_amount: parseFloat(get('gross_purchase_amount')) || 0,
+        supplier: get('supplier'), purchase_order: get('purchase_order'),
+        expected_end_of_life: get('expected_end_of_life') || '',
+        warranty_expiry: get('warranty_expiry') || '',
+        notes: get('notes'),
+        components: comp ? [comp] : [],
+        activity_log: [],
+      };
+    }
+  }
+
+  importParsedAssets = Object.values(assetMap);
+  if (!importParsedAssets.length) { toast('No new assets found — all asset codes already exist.', 'error'); return; }
+
+  const missingDate = importParsedAssets.filter(a => !a.purchase_date);
+  if (missingDate.length) {
+    toast(`Import blocked: ${missingDate.length} asset(s) missing Purchase Date (${missingDate.map(a => a.asset_code).join(', ')}).`, 'error');
+    return;
+  }
+
+  const preview = document.getElementById('importPreview');
+  document.getElementById('importPreviewLabel').textContent =
+    `${importParsedAssets.length} new asset(s) ready to import${skipped ? ` · ${skipped} skipped (already exist)` : ''}`;
+  document.getElementById('importPreviewHead').innerHTML = `<tr>${['Code','Name','Category','Location','Custodian','Status','Purchase Date','Components'].map(h =>
+    `<th style="padding:6px 8px;font-size:10px;font-family:var(--mono);text-transform:uppercase;letter-spacing:0.06em;color:var(--text2);text-align:left;border-bottom:1px solid var(--border);white-space:nowrap;">${h}</th>`).join('')}</tr>`;
+  document.getElementById('importPreviewBody').innerHTML = importParsedAssets.map(a => `<tr>
+    <td style="padding:5px 8px;border-bottom:1px solid var(--grey-light);font-family:var(--mono);font-size:11px;color:var(--text2)">${a.asset_code}</td>
+    <td style="padding:5px 8px;border-bottom:1px solid var(--grey-light);font-weight:500">${a.asset_name}</td>
+    <td style="padding:5px 8px;border-bottom:1px solid var(--grey-light);color:var(--text2)">${a.asset_category}</td>
+    <td style="padding:5px 8px;border-bottom:1px solid var(--grey-light);color:var(--text2)">${a.location || '—'}</td>
+    <td style="padding:5px 8px;border-bottom:1px solid var(--grey-light);color:var(--text2)">${a.custodian || '—'}</td>
+    <td style="padding:5px 8px;border-bottom:1px solid var(--grey-light)">${statusBadge(a.status)}</td>
+    <td style="padding:5px 8px;border-bottom:1px solid var(--grey-light);font-family:var(--mono);font-size:11px">${a.purchase_date || '—'}</td>
+    <td style="padding:5px 8px;border-bottom:1px solid var(--grey-light);color:var(--text2)">${a.components.length ? a.components.length + ' part(s)' : '—'}</td>
+  </tr>`).join('');
+  preview.style.display = 'block';
+  const btn = document.getElementById('importConfirmBtn');
+  btn.style.display = 'inline-flex';
+  btn.textContent = `Import ${importParsedAssets.length} Asset${importParsedAssets.length > 1 ? 's' : ''}`;
+}
+
+async function confirmImport() {
+  if (!importParsedAssets.length) return;
+  const btn = document.getElementById('importConfirmBtn');
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner"></span> Importing…';
+  let successCount = 0;
+  for (const asset of importParsedAssets) {
+    try { await sbUpsert(asset); assets.push(asset); successCount++; }
+    catch(e) { console.error('Failed to import', asset.asset_code, e); }
+  }
+  closeImport();
+  populateFilterDropdowns();
+  applyFilters();
+  updateStats();
+  toast(`✓ Imported ${successCount} asset${successCount !== 1 ? 's' : ''} successfully.`, 'success');
+  btn.disabled = false;
+}
+
+function downloadImportTemplate() {
+  const headers = ['asset_code','asset_name','asset_category','serial_no','department','location','custodian','status','purchase_date','gross_purchase_amount','supplier','purchase_order','notes','comp_part_type','comp_brand_model','comp_serial_no','comp_specs','comp_amount'];
+  const example = ['AST-00200','Sample Laptop','Laptop','SN-12345','IT','Pineda Office','Juan Dela Cruz','Active','2026-01-15','25000','Supplier Name','PO-001','Sample notes','Processor','Intel Core i5','','16GB RAM',''];
+  download('import_template.csv', [headers.join(','), example.join(',')].join('\n'), 'text/csv');
+}
+
+function printSelectedTags(size = 'standard') {
+  const toprint = assets.filter(a => selectedIds.has(a.id));
+  if (!toprint.length) { toast('No assets selected.', 'error'); return; }
+  loadTagLibraries(() => generateMultiTagPDF(toprint, size));
+}
+
+function printTag(id, size = 'standard') {
+  const asset = assets.find(a => a.id === id);
+  if (!asset) return;
+  loadTagLibraries(() => generateMultiTagPDF([asset], size));
+}
+
+function loadTagLibraries(cb) {
+  if (typeof window.jspdf !== 'undefined' && typeof QRCode !== 'undefined') { cb(); return; }
+  toast('Loading PDF library…');
+  Promise.all([
+    loadScript('https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js'),
+    loadScript('https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js'),
+  ]).then(cb).catch(() => toast('Failed to load PDF library.', 'error'));
+}
+
+function loadScript(src) {
+  return new Promise((resolve, reject) => {
+    if (document.querySelector(`script[src="${src}"]`)) { resolve(); return; }
+    const s = document.createElement('script');
+    s.src = src;
+    s.onload = resolve;
+    s.onerror = reject;
+    document.head.appendChild(s);
+  });
+}
+
+function generateMultiTagPDF(assetList, size = 'standard') {
+  const qrResults = [];
+  let pending = assetList.length;
+  assetList.forEach((asset, i) => {
+    const qrDiv = document.createElement('div');
+    qrDiv.style.cssText = 'position:absolute;left:-9999px;top:-9999px;';
+    document.body.appendChild(qrDiv);
+    new QRCode(qrDiv, { text: asset.asset_code, width: 256, height: 256, colorDark: '#000000', colorLight: '#ffffff', correctLevel: QRCode.CorrectLevel.M });
+    setTimeout(() => {
+      const canvas = qrDiv.querySelector('canvas');
+      qrResults[i] = { asset, qrDataUrl: canvas ? canvas.toDataURL('image/png') : null };
+      document.body.removeChild(qrDiv);
+      pending--;
+      if (pending === 0) buildMultiPDF(qrResults, size);
+    }, 200 + i * 50);
+  });
+}
+
+function buildMultiPDF(items, size = 'standard') {
+  const { jsPDF } = window.jspdf;
+  const isMini = size === 'mini';
+  const W = isMini ? 30 : 50;
+  const H = isMini ? 15 : 30;
+  const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: [W, H] });
+  items.forEach(({ asset, qrDataUrl }, idx) => {
+    if (idx > 0) doc.addPage([W, H], 'landscape');
+    if (isMini) buildMiniTagPage(doc, asset, qrDataUrl, W, H);
+    else buildTagPage(doc, asset, qrDataUrl, W, H);
+  });
+  const suffix = isMini ? 'mini' : 'standard';
+  const filename = items.length === 1
+    ? `tag_${suffix}_${items[0].asset.asset_code.replace(/[^a-zA-Z0-9]/g, '_')}.pdf`
+    : `asset_tags_${suffix}_${items.length}.pdf`;
+  doc.save(filename);
+  toast(`PDF saved: ${filename} (${items.length} tag${items.length > 1 ? 's' : ''})`, 'success');
+}
+
+function buildMiniTagPage(doc, asset, qrDataUrl, W, H) {
+  const leftW = W * 0.38;
+  const rx = leftW + 1.0;
+  const rw = W - leftW - 1.5;
+
+  // ── Left: black panel + QR ─────────────────────────────────────────────
+  doc.setFillColor(0, 0, 0);
+  doc.rect(0, 0, leftW, H, 'F');
+  if (qrDataUrl) {
+    const qrSize = leftW - 1.5;
+    const qrX = (leftW - qrSize) / 2;
+    const qrY = (H - qrSize) / 2;
+    doc.setFillColor(255, 255, 255);
+    doc.rect(qrX - 0.3, qrY - 0.3, qrSize + 0.6, qrSize + 0.6, 'F');
+    doc.addImage(qrDataUrl, 'PNG', qrX, qrY, qrSize, qrSize);
+  }
+
+  // ── ROW 1: code + name ────────────────────────────────────────────────
+  doc.setFont('helvetica', 'bold');
+  doc.setTextColor(10, 10, 10);
+  doc.setFontSize(4.2);
+  doc.text(asset.asset_code, rx, 2.4);
+
+  doc.setFontSize(4.0);
+  doc.setFont('helvetica', 'bold');
+  const nameLines = doc.splitTextToSize(asset.asset_name, rw);
+  doc.text(nameLines.slice(0, 2), rx, 4.1, { lineHeightFactor: 1.35 });
+
+  // ── ROW 2: purchase date ──────────────────────────────────────────────
+  doc.setFont('helvetica', 'bold');
+  doc.setTextColor(10, 10, 10);
+  doc.setFontSize(2.2);
+  const label = 'PURCHASE DATE:  ';
+  const labelW = doc.getTextWidth(label);
+  doc.text(label, rx, 8.5);
+  doc.setTextColor(10, 10, 10);
+  doc.setFontSize(2.8);
+  doc.text(asset.purchase_date || '—', rx + labelW, 8.5);
+
+  // ── ROW 3: DO NOT REMOVE box + property ──────────────────────────────
+  const dnrText = 'DO NOT REMOVE';
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(3.0);
+  const dnrTW = doc.getTextWidth(dnrText);
+  const boxW = rw;
+  const boxH = 2.1;
+  const boxX = rx - 0.3;
+  const boxY = 9.8;
+  doc.setDrawColor(10, 10, 10);
+  doc.setLineWidth(0.3);
+  doc.rect(boxX, boxY, boxW, boxH);
+  doc.setTextColor(10, 10, 10);
+  doc.text(dnrText, boxX + (boxW - dnrTW) / 2, boxY + boxH * 0.74);
+
+  doc.setFontSize(3.0);
+  doc.text('PROPERTY OF', rx + (rw - doc.getTextWidth('PROPERTY OF')) / 2, boxY + boxH + 1.1);
+  doc.setFontSize(3.0);
+  doc.text('MMI / MMR / HW', rx + (rw - doc.getTextWidth('MMI / MMR / HW')) / 2, boxY + boxH + 2.2);
+}
+
+function buildTagPage(doc, asset, qrDataUrl, W, H) {
+  const leftW = W * 0.38;
+  const rx = leftW + 1.8;
+  const rw = W - leftW - 2.5;
+
+  // ── Left: black panel + QR ─────────────────────────────────────────────
+  doc.setFillColor(0, 0, 0);
+  doc.rect(0, 0, leftW, H, 'F');
+  if (qrDataUrl) {
+    const qrSize = leftW - 3;
+    const qrX = (leftW - qrSize) / 2;
+    const qrY = (H - qrSize) / 2;
+    doc.setFillColor(255, 255, 255);
+    doc.rect(qrX - 0.5, qrY - 0.5, qrSize + 1, qrSize + 1, 'F');
+    doc.addImage(qrDataUrl, 'PNG', qrX, qrY, qrSize, qrSize);
+  }
+
+  // ── ROW 1: code + name ────────────────────────────────────────────────
+  doc.setFont('helvetica', 'bold');
+  doc.setTextColor(10, 10, 10);
+  doc.setFontSize(8.5);
+  doc.text(asset.asset_code, rx, 4.8);
+
+  doc.setFontSize(5.5);
+  doc.setFont('helvetica', 'normal');
+  const nameLines = doc.splitTextToSize(asset.asset_name, rw);
+  doc.text(nameLines.slice(0, 2), rx, 8.2, { lineHeightFactor: 1.35 });
+
+  // ── ROW 2: purchase date ──────────────────────────────────────────────
+  doc.setFont('helvetica', 'bold');
+  doc.setTextColor(10, 10, 10);
+  doc.setFontSize(4.5);
+  const label = 'PURCHASE DATE:  ';
+  const labelW = doc.getTextWidth(label);
+  doc.text(label, rx, 15);
+  doc.setTextColor(10, 10, 10);
+  doc.setFontSize(6.5);
+  doc.text(asset.purchase_date || '—', rx + labelW, 15);
+
+  // ── ROW 3: DO NOT REMOVE box + property ──────────────────────────────
+  const dnrText = 'DO NOT REMOVE';
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(6.0);
+  const dnrTW = doc.getTextWidth(dnrText);
+  const boxW = rw;
+  const boxH = 4.2;
+  const boxX = rx - 0.5;
+  const boxY = 16.5;
+  doc.setDrawColor(10, 10, 10);
+  doc.setLineWidth(0.55);
+  doc.rect(boxX, boxY, boxW, boxH);
+  doc.setTextColor(10, 10, 10);
+  doc.text(dnrText, boxX + (boxW - dnrTW) / 2, boxY + boxH * 0.74);
+
+  doc.setFontSize(4.0);
+  doc.text('PROPERTY OF', rx + (rw - doc.getTextWidth('PROPERTY OF')) / 2, boxY + boxH + 2.2);
+  doc.setFontSize(4.8);
+  doc.text('MMI / MMR / HW', rx + (rw - doc.getTextWidth('MMI / MMR / HW')) / 2, boxY + boxH + 4.4);
+}
+
+// ─── Auth ─────────────────────────────────────────────────────────────────────
+const USERS = [
+  { username: 'mmi.rissa.lim@gmail.com', password: 'conan',     name: 'Rissa',   role: 'admin'  },
+  { username: 'editor1',                 password: 'edit123',   name: 'Editor 1', role: 'editor' },
+  { username: 'editor2',                 password: 'edit234',   name: 'Editor 2', role: 'editor' },
+  { username: 'editor3',                 password: 'edit345',   name: 'Editor 3', role: 'editor' },
+  { username: 'viewer',                  password: 'view123',   name: 'Viewer',   role: 'viewer' },
+];
+
+let currentUser = null;
+
+function doLogin() {
+  const u = document.getElementById('loginUser').value.trim();
+  const p = document.getElementById('loginPass').value;
+  const user = USERS.find(x => x.username === u && x.password === p);
+  if (!user) {
+    const err = document.getElementById('loginError');
+    err.style.display = 'block';
+    setTimeout(() => err.style.display = 'none', 3000);
+    return;
+  }
+  currentUser = user;
+  sessionStorage.setItem('currentUser', JSON.stringify(user));
+  document.getElementById('loginPage').style.display = 'none';
+  document.getElementById('appPage').style.display = 'block';
+  applyRolePermissions();
+  init();
+}
+
+function doLogout() {
+  currentUser = null;
+  sessionStorage.removeItem('currentUser');
+  document.getElementById('appPage').style.display = 'none';
+  document.getElementById('loginPage').style.display = 'flex';
+  document.getElementById('loginUser').value = '';
+  document.getElementById('loginPass').value = '';
+}
+
+function applyRolePermissions() {
+  const role = currentUser.role;
+  document.getElementById('userPill').innerHTML =
+    `<span>${currentUser.name}</span>
+     <button class="logout-btn" onclick="doLogout()">Sign out</button>`;
+  const isAdmin = role === 'admin';
+  const canEdit = role === 'admin' || role === 'editor';
+  document.getElementById('btnAddAsset').style.display = canEdit  ? '' : 'none';
+  document.getElementById('btnImport').style.display   = isAdmin  ? '' : 'none';
+  document.getElementById('btnExport').style.display   = isAdmin  ? '' : 'none';
+}
+
+// Check session on load
+window.addEventListener('DOMContentLoaded', () => {
+  const saved = sessionStorage.getItem('currentUser');
+  if (saved) {
+    currentUser = JSON.parse(saved);
+    document.getElementById('loginPage').style.display = 'none';
+    document.getElementById('appPage').style.display = 'block';
+    applyRolePermissions();
+    init();
+  }
+});
+</script>
+</div><!-- end app -->
+</div><!-- end appPage -->
+</body>
+</html>
