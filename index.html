@@ -1701,24 +1701,39 @@ function openExport() {
 function closeExport() { document.getElementById('exportModal').classList.remove('open'); }
 
 function exportCSV() {
-  // ERPNext Asset doctype column names
-  const headers = ['name','asset_name','serial_no','asset_category','custodian','department','location','status','purchase_date','gross_purchase_amount','supplier','purchase_order','expected_end_of_life','warranty_expiry','notes'];
-  const labels = ['name','asset_name','serial_no','asset_category','custodian','department','location','status','purchase_date','gross_purchase_amount','supplier','purchase_order','expected_end_of_life','warranty_expiry','notes'];
-  const rows = assets.map(a => headers.map(h => {
-    const val = h === 'name' ? a.asset_code : (a[h] !== undefined ? a[h] : '');
+  const assetHeaders = ['name','asset_name','serial_no','asset_category','custodian',
+    'department','location','status','purchase_date','gross_purchase_amount',
+    'supplier','purchase_order','expected_end_of_life','warranty_expiry','notes'];
+  const compHeaders = ['comp_part_type','comp_brand_model','comp_serial_no','comp_specs','comp_amount'];
+  const allHeaders = [...assetHeaders, ...compHeaders];
+
+  function esc(val) {
     const s = String(val ?? '');
-    return s.includes(',') || s.includes('"') || s.includes('\n') ? `"${s.replace(/"/g,'""')}"` : s;
-  }).join(','));
-  const csv = [labels.join(','), ...rows].join('\n');
+    return s.includes(',') || s.includes('"') || s.includes('\n')
+      ? `"${s.replace(/"/g, '""')}"` : s;
+  }
+
+  const rows = [];
+  assets.forEach(a => {
+    const assetCols = assetHeaders.map(h => {
+      const val = h === 'name' ? a.asset_code : (a[h] !== undefined ? a[h] : '');
+      return esc(val);
+    });
+
+    const comps = a.components && a.components.length ? a.components : [null];
+    comps.forEach(c => {
+      const compCols = c
+        ? [esc(c.part_type), esc(c.brand_model), esc(c.serial_no), esc(c.specs), esc(c.amount)]
+        : ['', '', '', '', ''];
+      rows.push([...assetCols, ...compCols].join(','));
+    });
+  });
+
+  const csv = [allHeaders.join(','), ...rows].join('\n');
   download('asset_inventory.csv', csv, 'text/csv');
   closeExport();
-  toast('CSV exported — import via ERPNext → Data Import.', 'success');
+  toast('CSV exported with components — import via ERPNext → Data Import.', 'success');
 }
-
-function exportJSON() {
-  download('asset_inventory.json', JSON.stringify(assets, null, 2), 'application/json');
-  closeExport();
-  toast('JSON exported.', 'success');
 }
 
 function download(filename, content, type) {
