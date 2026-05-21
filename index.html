@@ -2020,7 +2020,7 @@ function parseImportRows(rows) {
       if (comp) assetMap[code].components.push(comp);
     } else {
       const statusRaw = get('status');
-      const validStatuses = ['Active','In Stock (Undeployed)','Under Maintenance','Retired','Scrapped'];
+      const validStatuses = ['Active','In Stock (Undeployed)','Under Maintenance','Used - In Storage','Retired','Scrapped'];
       const status = validStatuses.find(s => s.toLowerCase() === statusRaw.toLowerCase()) || 'Active';
       assetMap[code] = {
         id: 'import_' + Date.now() + '_' + i,
