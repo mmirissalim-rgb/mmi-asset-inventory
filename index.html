@@ -885,6 +885,7 @@
                 <option>In Stock (Undeployed)</option>
                 <option>Under Maintenance</option>
                 <option>Retired</option>
+                <option>Used - In Storage</option>
                 <option>Scrapped</option>
               </select>
             </div>
@@ -1209,7 +1210,7 @@ function updateDeptTrigger() {
 }
 
 // ─── Status multiselect ───────────────────────────────────────────────────────
-const STATUS_OPTIONS = ['Active','In Stock (Undeployed)','Under Maintenance','Retired','Scrapped'];
+const STATUS_OPTIONS = ['Active','In Stock (Undeployed)','Under Maintenance','Used - In Storage','Retired','Scrapped'];
 
 function toggleStatusPanel() {
   document.getElementById('statusPanel').classList.toggle('open');
