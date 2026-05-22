@@ -195,7 +195,7 @@
   .col-status{ width: 120px; }
   .col-date  { width: 100px; }
   .col-cust  { width: 130px; }
-  .col-act   { width: 112px; }
+  .col-act   { width: 146px; }
 
   /* Print dropdown */
   .print-dropdown { position: relative; display: inline-block; }
@@ -1460,6 +1460,9 @@ function renderTable() {
               <span class="print-dropdown-item" onclick="printTag('${a.id}','standard');closePrintMenus()">Standard (50×30mm)</span>
               <span class="print-dropdown-item" onclick="printTag('${a.id}','mini');closePrintMenus()">Mini (30×15mm)</span>
             </div>
+           ${(currentUser && currentUser.role !== 'viewer') ? 
+  `<button class="btn btn-outline btn-sm btn-icon" 
+   title="Duplicate" onclick="openDuplicate('${a.id}')">⧉</button>` : ''} 
           </div>
           ${(currentUser && currentUser.role !== 'viewer') ? `<button class="btn btn-outline btn-sm btn-icon" title="Edit" onclick="openEdit('${a.id}')">✎</button>` : ''}
           ${(currentUser && currentUser.role === 'admin') ? `<button class="btn btn-danger btn-sm btn-icon" title="Delete" onclick="openDelete('${a.id}')">✕</button>` : ''}
@@ -1571,6 +1574,33 @@ function openEdit(id) {
   renderComponents(asset.components || []);
   renderLog(asset.activity_log || []);
   setLogDate();
+  function openDuplicate(id) {
+  const asset = assets.find(a => a.id === id);
+  if (!asset) return;
+  editingId = null;
+  document.getElementById('modalTitle').textContent = 'Duplicate Asset';
+  document.getElementById('modalSubtitle').textContent = 'Copy of ' + asset.asset_code;
+  clearForm();
+  const maxCode = assets.reduce((max, a) => {
+    const n = parseInt((a.asset_code || '').replace(/\D/g, '')) || 0;
+    return Math.max(max, n);
+  }, 0);
+  document.getElementById('f_asset_code').value = 'AST-' + String(maxCode + 1).padStart(5, '0');
+  const fields = ['asset_name','serial_no','asset_category','custodian',
+    'department','location','status','purchase_date','gross_purchase_amount',
+    'supplier','purchase_order','expected_end_of_life','warranty_expiry'];
+  fields.forEach(f => {
+    const el = document.getElementById('f_' + f);
+    if (el) el.value = asset[f] !== undefined ? asset[f] : '';
+  });
+  switchTab('details');
+  renderComponents([]);
+  renderLog([]);
+  setLogDate();
+  populateAssetNameSuggestions();
+  document.getElementById('assetModal').classList.add('open');
+  setTimeout(() => document.getElementById('f_asset_name').focus(), 100);
+}
   populateAssetNameSuggestions();
   document.getElementById('assetModal').classList.add('open');
 }
