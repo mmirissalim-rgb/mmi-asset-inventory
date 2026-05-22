@@ -188,14 +188,16 @@
 
   /* Column widths */
   .col-cb    { width: 36px; }
-  .col-code  { width: 110px; }
-  .col-name  { width: 230px; }
-  .col-cat   { width: 150px; }
-  .col-loc   { width: 180px; }
-  .col-status{ width: 120px; }
-  .col-date  { width: 100px; }
-  .col-cust  { width: 130px; }
-  .col-act   { width: 146px; }
+.col-code  { width: 110px; }
+.col-name  { width: 210px; }
+.col-cat   { width: 150px; white-space: normal; overflow: visible; }
+.col-cat .cat-tag { white-space: normal; word-break: break-word; }
+.col-loc   { width: 180px; }
+.col-status{ width: 120px; white-space: normal; overflow: visible; }
+.col-status .badge { white-space: normal; word-break: break-word; }
+.col-date  { width: 100px; }
+.col-cust  { width: 130px; }
+.col-act   { width: 166px; }
 
   /* Print dropdown */
   .print-dropdown { position: relative; display: inline-block; }
@@ -1527,6 +1529,7 @@ function updateStats() {
     <div class="stat-card"><div class="stat-label">Active</div><div class="stat-value green">${active}</div></div>
     <div class="stat-card"><div class="stat-label">In Stock (Undeployed)</div><div class="stat-value" style="color:var(--info)">${instock}</div></div>
     <div class="stat-card"><div class="stat-label">Under Maintenance</div><div class="stat-value amber">${maintenance}</div></div>
+    <div class="stat-card"><div class="stat-label">Used - In Storage</div><div class="stat-value" style="color:var(--info)">${assets.filter(a=>a.status==='Used - In Storage').length}</div></div>
     <div class="stat-card"><div class="stat-label">Retired / Scrapped</div><div class="stat-value red">${assets.filter(a=>a.status==='Retired'||a.status==='Scrapped').length}</div></div>
   `;
 }
