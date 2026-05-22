@@ -1577,7 +1577,11 @@ function openEdit(id) {
   renderComponents(asset.components || []);
   renderLog(asset.activity_log || []);
   setLogDate();
-  function openDuplicate(id) {
+  populateAssetNameSuggestions();
+  document.getElementById('assetModal').classList.add('open');
+}
+
+function openDuplicate(id) {
   const asset = assets.find(a => a.id === id);
   if (!asset) return;
   editingId = null;
@@ -1604,10 +1608,6 @@ function openEdit(id) {
   document.getElementById('assetModal').classList.add('open');
   setTimeout(() => document.getElementById('f_asset_name').focus(), 100);
 }
-  populateAssetNameSuggestions();
-  document.getElementById('assetModal').classList.add('open');
-}
-
 function clearForm() {
   ['asset_code','asset_name','serial_no','asset_category','custodian','department','location','status','purchase_date','gross_purchase_amount','supplier','purchase_order','expected_end_of_life','warranty_expiry'].forEach(f => {
     const el = document.getElementById('f_' + f);
